@@ -1,0 +1,18 @@
+name: DdinghowaChef
+version: '1.0.0'
+main: kr.ddinghowa.mc.DdinghowaPlugin
+api-version: '26.3'
+description: 띵호와 주방장1 - 짜장면 만들기 (플래시 게임을 마인크래프트로 재구현)
+authors: [ddinghowa-mc]
+commands:
+  ddinghowa:
+    description: 띵호와 주방장 게임 명령어
+    usage: /<command> <start|stop|restart|control|mask|pack>
+    aliases: [jjajang, 띵호와]
+permissions:
+  ddinghowa.admin:
+    description: 게임 시작/종료/조작자 변경
+    default: op
+  ddinghowa.mask:
+    description: 주방장 가면 받기
+    default: op

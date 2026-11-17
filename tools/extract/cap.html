@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent;overflow:hidden}</style></head>
+<body><div id="c"></div><script src="ruffle.js"></script><script>
+const q=new URLSearchParams(location.search); const S=parseFloat(q.get('s')||'2');
+window.RufflePlayer=window.RufflePlayer||{};
+window.RufflePlayer.config={autoplay:"on",unmuteOverlay:"hidden",splashScreen:false,contextMenu:"off",letterbox:"off",preferredRenderer:q.get('r')||'webgl',quality:'best',wmode:'transparent',backgroundColor:null,logLevel:'error',allowScriptAccess:true,warnOnUnsupportedContent:false};
+const p=window.RufflePlayer.newest().createPlayer(); p.style.width=(550*S)+'px';p.style.height=(413*S)+'px';
+document.getElementById('c').appendChild(p);
+window.ready=0; p.onFSCommand=(c,a)=>{ if(c==='ready'){window.ready++;} return true; };
+p.ruffle().load({url:q.get('swf'), wmode:'transparent'}).catch(e=>window.loadErr=String(e));
+</script></body></html>

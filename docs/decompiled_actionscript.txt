@@ -1,0 +1,1074 @@
+exports {1: 'bb', 2: 'st', 15: 'failBGM', 16: 'fallingWater', 17: 'takeMaterial', 18: 'moreComplete', 19: 'badSound2', 20: 'needComplete', 21: 'goodSound1', 22: 'goodSound0', 23: 'badSound1', 24: 'badSound0', 40: 'zing'}
+[MAIN f1] DoAction
+    0: function checkAllow() {
+     30: _root.play()
+      }
+[MAIN f1] DoAction
+  121: total = Math.round((this.getBytesTotal() / 1000))
+  171: current = Math.round((this.getBytesLoaded() / 1000))
+  213: percent = Math.round(((current / total) * 100))
+[MAIN f2] DoAction
+   26: if !(current < total) goto 98
+   86: _root.barline.bar._xscale = percent
+   87: gotoFrame(1)
+   92: play()
+   93: goto 103
+   98: gotoFrame(4)
+[MAIN f4] DoAction
+    0: stop()
+   45: _root.sayhiani.play()
+[MAIN f5] DoAction
+  242: zing_sound = new Sound()
+  262: zing_sound.attachSound('zing')
+  280: badSound0 = new Sound()
+  300: badSound0.attachSound('badSound0')
+  312: <fn>
+      function () {
+     19: badSound0.stop('badSound0')
+     39: badSound1.stop('badSound1')
+      }
+  360: badSound0.onSoundComplete = <fn>
+  378: badSound1 = new Sound()
+  398: badSound1.attachSound('badSound1')
+  410: <fn>
+      function () {
+     21: badSound0.onSoundComplete()
+      }
+  440: badSound1.onSoundComplete = <fn>
+  458: badSound2 = new Sound()
+  478: badSound2.attachSound('badSound2')
+  490: <fn>
+      function () {
+     19: badSound2.stop('badSound2')
+     39: needComplete.stop('needComplete')
+     59: moreComplete.stop('moreComplete')
+     87: _root.dishArrow.stop()
+    107: _root.dishArrow._visible = false
+      }
+  606: badSound2.onSoundComplete = <fn>
+  624: needComplete = new Sound()
+  644: needComplete.attachSound('needComplete')
+  656: <fn>
+      function () {
+     21: badSound2.onSoundComplete()
+      }
+  686: needComplete.onSoundComplete = <fn>
+  704: moreComplete = new Sound()
+  724: moreComplete.attachSound('moreComplete')
+  736: <fn>
+      function () {
+     21: badSound2.onSoundComplete()
+      }
+  766: moreComplete.onSoundComplete = <fn>
+  784: goodSound0 = new Sound()
+  804: goodSound0.attachSound('goodSound0')
+  822: goodSound1 = new Sound()
+  842: goodSound1.attachSound('goodSound1')
+  860: takeSound = new Sound()
+  880: takeSound.attachSound('takeMaterial')
+  898: fallingWaterSound = new Sound()
+  918: fallingWaterSound.attachSound('fallingWater')
+  936: failBGM = new Sound()
+  956: failBGM.attachSound('failBGM')
+[MAIN f171] DoAction
+   36: zing_sound.start()
+[MAIN f829] DoAction
+  152: mc_skillTree._visible = false
+  158: <fn>
+      function () {
+      8: r1 := this
+     12: r1
+     32: <fn>
+        function () {
+       19: this._parent._visible = false
+        }
+     60: r1.mc_skillTree.btn_skillClose.onRelease = <fn>
+     80: <fn>
+        function () {
+       22: this.gotoAndStop(2)
+        }
+    111: r1.mc_skillTree.btn_skillClose.onRollOver = <fn>
+    131: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    162: r1.mc_skillTree.btn_skillClose.onRollOut = <fn>
+    182: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    213: r1.mc_skillTree.btn_skillClose.onReleaseOutside = <fn>
+    227: <fn>
+        function () {
+       19: _root.mc_skillTree._visible = true
+        }
+    255: r1.btn_help.onRelease = <fn>
+    269: <fn>
+        function () {
+       22: this.gotoAndStop(2)
+        }
+    300: r1.btn_help.onRollOver = <fn>
+    314: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    345: r1.btn_help.onRollOut = <fn>
+    359: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    390: r1.btn_help.onReleaseOutside = <fn>
+    391: r1 := r1
+    395: r1
+      }
+  562: MetaHelp = <fn>
+  578: MetaHelp()
+[MAIN f3235] DoAction
+    7: z
+[MAIN f3236] DoAction
+    0: stopAllSounds()
+[MAIN f3266] DoAction
+  211: function ClearIntV(iid) {
+     17: clearInterval(iid)
+      }
+  250: function IntervalLoop(vesselName, meterialName, returnFr) {
+      8: r1 := vesselName
+     12: r1
+     19: var abc = getTimer()
+     37: ClearIntV(intervalID)
+     47: if !(r1 == 'pot') goto 81
+     80: _root[('vessel_' + r1)].pot_kettle._visible = false
+     96: if !!(returnFr == undefine) goto 134
+    133: _root[('vessel_' + r1)].gotoAndStop(returnFr)
+    147: ToggleCookButton(true)
+    148: r1 := r1
+    152: r1
+      }
+  456: function SetIntV(loopTime, vesselName, meterialName, returnFr) {
+     43: intervalID = setInterval(IntervalLoop, loopTime, vesselName, meterialName, returnFr)
+     53: trace(('인터벌 시도 : ' + meterialName))
+     67: ToggleCookButton(false)
+      }
+[MAIN f3266] DoAction
+  291: <fn>
+      function () {
+     21: Mouse.hide()
+     27: <fn>
+        function () {
+       34: this.godHand._x = (getProperty('', _xmouse) + 9)
+       69: this.godHand._y = (getProperty('', _ymouse) + 13)
+        }
+    105: onMouseMove = <fn>
+      }
+  405: MouseCursor = <fn>
+  411: <fn>
+      function (keyCode, posInfo) {
+      8: r1 := _root
+     12: r1
+     29: if !(posInfo == 1) goto 293
+     41: answer = '뗌'
+     51: r1.DragMode = false
+     64: if !r1[r1.newDupName] goto 288
+    103: if !(r1.godHand.hitTest(r1.vessel_pot) == true) goto 137
+    131: r1.CheckCooking('pot', r1.foodMaterial)
+    132: goto 268
+    171: if !(r1.godHand.hitTest(r1.vessel_pan) == true) goto 205
+    199: r1.CheckCooking('pan', r1.foodMaterial)
+    200: goto 268
+    239: if !(r1.godHand.hitTest(r1.vessel_dish3) == true) goto 268
+    267: r1.CheckCooking('dish3', r1.foodMaterial)
+    287: RemoveDragClip(r1.newDupName)
+    288: goto 311
+    300: answer = '누름'
+    310: r1.DragMode = true
+    311: r1 := r1
+    315: r1
+      }
+  751: MouseAction = <fn>
+  769: myListener = new Object()
+  781: <fn>
+      function () {
+     28: _root.MouseAction(pCode, 2)
+      }
+  818: myListener.onMouseDown = <fn>
+  830: <fn>
+      function () {
+     28: _root.MouseAction(rCode, 1)
+      }
+  867: myListener.onMouseUp = <fn>
+  891: Mouse.addListener(myListener)
+[MAIN f3266] DoAction
+ 1934: <fn>
+      function () {
+      8: r1 := _root
+     12: r1
+     23: dishStatus1 = 1
+     34: dishStatus2 = 1
+     45: dishStatus3 = 1
+     58: r1.dupNo = 2000
+     80: r1.vessel_pot.pot_kettle._visible = false
+     96: r1.dishArrow._visible = false
+    120: r1.dishArrow.stop()
+    134: nowFood.vessel = false
+    144: r1.zzazang = false
+    154: r1.noodle = false
+    164: r1.cookComplete = false
+    181: r1.foodScore = 0
+    182: r1 := r1
+    186: r1
+      }
+ 2129: DefaultSetting = <fn>
+ 2135: <fn>
+      function () {
+      }
+ 2143: FoodTree = <fn>
+ 2163: FoodTree.prototype.vegetable = false
+ 2183: FoodTree.prototype.meat = false
+ 2203: FoodTree.prototype.noodle = false
+ 2223: FoodTree.prototype.garlic = false
+ 2243: FoodTree.prototype.chun = false
+ 2263: FoodTree.prototype.sugar = false
+ 2283: FoodTree.prototype.oil = false
+ 2303: FoodTree.prototype.kettle = false
+ 2323: FoodTree.prototype.dish1 = false
+ 2343: FoodTree.prototype.dish2 = false
+ 2363: FoodTree.prototype.dish3 = false
+ 2383: FoodTree.prototype.vessel = false
+ 2389: <fn>
+      function (gaugeAction) {
+      8: r1 := _root
+     12: r1
+     19: r0 := gaugeAction
+     29: if (r0 === 'PLAY') goto 52
+     42: if (r0 === 'STOP') goto 102
+     47: goto 211
+     61: r1.playMode = 'COOK'
+     96: this.mc_gauge.gaugeMask.gotoAndPlay(2)
+     97: goto 217
+    111: r1.playMode = 'STOP'
+    145: this.mc_gauge.gaugeMask.stop()
+    146: stopAllSounds()
+    181: r1[('vessel_' + nowFood.vessel)].gotoAndStop(1)
+    205: CookMeterial(nowFood.vessel)
+    206: goto 217
+    216: trace('에러')
+    217: r1 := r1
+    221: r1
+      }
+ 2631: MetaGauge = <fn>
+ 2637: <fn>
+      function () {
+     10: r1 := this
+     14: r1
+     21: r2 := _root
+     25: r2
+     31: trace('버튼정의')
+     47: r1.btn_takeOut._visible = false
+     61: <fn>
+        function () {
+       13: ToggleButton(true)
+       33: _root.MetaGauge('STOP')
+       47: this._visible = false
+       67: _root.btn_takeOff._visible = true
+        }
+    137: r1.btn_takeOut.onRelease = <fn>
+    151: <fn>
+        function () {
+       13: ToggleButton(false)
+       33: _root.MetaGauge('PLAY')
+       47: this._visible = false
+       67: _root.btn_takeOut._visible = true
+        }
+    227: r1.btn_takeOff.onRelease = <fn>
+    228: r2 := r2
+    232: r2
+    233: r1 := r1
+    237: r1
+      }
+ 2883: MetaCookButton = <fn>
+ 2889: <fn>
+      function (foodName, ripePoint) {
+      }
+ 2916: RipeFood = <fn>
+ 2922: <fn>
+      function (toggleType) {
+     10: r1 := this
+     14: r1
+     21: r2 := toggleType
+     25: r2
+     41: r1.btn_vegetable.enabled = r2
+     57: r1.btn_meat.enabled = r2
+     73: r1.btn_noodle.enabled = r2
+     89: r1.btn_garlic.enabled = r2
+    105: r1.btn_chun.enabled = r2
+    121: r1.btn_sugar.enabled = r2
+    137: r1.btn_oil.enabled = r2
+    153: r1.btn_kettle.enabled = r2
+    154: r2 := r2
+    158: r2
+    159: r1 := r1
+    163: r1
+      }
+ 3105: ToggleButton = <fn>
+ 3111: <fn>
+      function (toggleType) {
+     20: this.btn_takeOff.enabled = toggleType
+     41: this.btn_takeOut.enabled = toggleType
+      }
+ 3172: ToggleCookButton = <fn>
+ 3178: <fn>
+      function () {
+      8: r1 := this
+     12: r1
+     28: r1.mc_skillTree._visible = false
+     48: <fn>
+        function () {
+       19: this._parent._visible = false
+        }
+     76: r1.mc_skillTree.btn_skillClose.onRelease = <fn>
+     96: <fn>
+        function () {
+       22: this.gotoAndStop(2)
+        }
+    127: r1.mc_skillTree.btn_skillClose.onRollOver = <fn>
+    147: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    178: r1.mc_skillTree.btn_skillClose.onRollOut = <fn>
+    198: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    229: r1.mc_skillTree.btn_skillClose.onReleaseOutside = <fn>
+    243: <fn>
+        function () {
+       19: _root.mc_skillTree._visible = true
+        }
+    271: r1.btn_help.onRelease = <fn>
+    285: <fn>
+        function () {
+       22: this.gotoAndStop(2)
+        }
+    316: r1.btn_help.onRollOver = <fn>
+    330: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    361: r1.btn_help.onRollOut = <fn>
+    375: <fn>
+        function () {
+       22: this.gotoAndStop(1)
+        }
+    406: r1.btn_help.onReleaseOutside = <fn>
+    407: r1 := r1
+    411: r1
+      }
+ 3598: MetaHelp = <fn>
+ 3604: <fn>
+      function (itemName) {
+     10: r1 := this
+     14: r1
+     21: r2 := itemName
+     25: r2
+     42: <fn>
+        function (exception) {
+       22: this.gotoAndStop(2)
+        }
+     83: r1[('btn_' + r2)].onRollOver = <fn>
+    100: <fn>
+        function (exception) {
+       22: this.gotoAndStop(1)
+        }
+    141: r1[('btn_' + r2)].onRollOut = <fn>
+    158: <fn>
+        function (exception) {
+       22: this.gotoAndStop(1)
+        }
+    199: r1[('btn_' + r2)].onReleaseOutside = <fn>
+    216: <fn>
+        function (exception) {
+       22: this.gotoAndStop(1)
+       46: _root.DupDragClip(this)
+        }
+    281: r1[('btn_' + r2)].onPress = <fn>
+    282: r2 := r2
+    286: r2
+    287: r1 := r1
+    291: r1
+      }
+ 3913: MetaItemAction = <fn>
+ 3919: <fn>
+      function (itemName, parentFr, childFr) {
+     12: r1 := this
+     16: r1
+     23: r2 := itemName
+     27: r2
+     44: <fn>
+        function (exception) {
+       18: r1 := (Number(childFr) + 1)
+       22: r1
+       48: this.mc_dish.gotoAndStop(r1)
+       49: r1 := r1
+       53: r1
+        }
+    116: r1[('btn_' + r2)].onRollOver = <fn>
+    133: <fn>
+        function (exception) {
+       29: this.mc_dish.gotoAndStop(childFr)
+        }
+    181: r1[('btn_' + r2)].onRollOut = <fn>
+    198: <fn>
+        function (exception) {
+       29: this.mc_dish.gotoAndStop(childFr)
+        }
+    246: r1[('btn_' + r2)].onReleaseOutside = <fn>
+    263: <fn>
+        function (exception) {
+       29: this.mc_dish.gotoAndStop(childFr)
+       65: _root.DupDragClip(this, parentFr, childFr)
+        }
+    347: r1[('btn_' + r2)].onPress = <fn>
+    348: r3 := r3
+    352: r3
+    353: r2 := r2
+    357: r2
+    358: r1 := r1
+    362: r1
+      }
+ 4316: MetaItemAction2 = <fn>
+ 4322: <fn>
+      function (insName, parentFr, childFr) {
+     12: r1 := _root
+     16: r1
+     23: r2 := this
+     27: r2
+     41: r1.dupNo = (r1.dupNo + 1)
+     57: r1.newDupName = ('nowDragClip' + r1.dupNo)
+     82: r1.foodMaterial = substr(insName,13,-1)
+    109: if !((foodMaterial == 'chun') || (foodMaterial == 'sugar')) goto 228
+    125: r3 := ('drag_' + r1.foodMaterial)
+    129: r3
+    154: duplicateMovieClip(r3, r1.newDupName, (16384 + r1.dupNo))
+    188: r2[r1.newDupName]._x = (getProperty('', _xmouse) - 30)
+    222: r2[r1.newDupName]._y = (getProperty('', _ymouse) - 30)
+    223: goto 257
+    256: duplicateMovieClip(insName, r1.newDupName, (16384 + r1.dupNo))
+    278: takeSound.start()
+    303: r2[r1.newDupName].startDrag(false)
+    319: if !!(parentFr == undefine) goto 388
+    352: r1[r1.newDupName].gotoAndStop(parentFr)
+    387: r1[r1.newDupName].mc_dish.gotoAndStop(childFr)
+    424: r2.godHand.swapDepths((r1.dupNo + 10))
+    425: r3 := r3
+    429: r3
+    430: r2 := r2
+    434: r2
+    435: r1 := r1
+    439: r1
+      }
+ 4795: DupDragClip = <fn>
+ 4801: <fn>
+      function (insName) {
+      8: r1 := _root
+     12: r1
+     37: r1[insName].stopDrag()
+     47: removeMovieClip(r1[insName])
+     56: delete r1.newDupName
+     65: delete r1.foodMaterial
+     66: r1 := r1
+     70: r1
+      }
+ 4888: RemoveDragClip = <fn>
+ 4894: <fn>
+      function (vesselName, meterialName) {
+     12: r1 := meterialName
+     16: r1
+     23: r2 := vesselName
+     27: r2
+     34: r3 := _root
+     38: r3
+     44: r0 := r2
+     54: if (r0 === 'pot') goto 90
+     67: if (r0 === 'pan') goto 706
+     80: if (r0 === 'dish3') goto 1150
+     85: goto 1473
+     95: r0 := r1
+    105: if (r0 === 'vegetable') goto 206
+    118: if (r0 === 'meat') goto 227
+    131: if (r0 === 'noodle') goto 248
+    144: if (r0 === 'garlic') goto 320
+    157: if (r0 === 'chun') goto 341
+    170: if (r0 === 'oil') goto 362
+    183: if (r0 === 'kettle') goto 383
+    196: if (r0 === 'sugar') goto 622
+    201: goto 643
+    221: BadMeterial()
+    222: goto 701
+    242: BadMeterial()
+    243: goto 701
+    271: if !!(r3.nowFood.kettle == undefine) goto 299
+    293: PutInMeterial(r2, r1, 'water_kettle')
+    294: goto 315
+    314: PutInMeterial(r2, r1)
+    315: goto 701
+    335: BadMeterial()
+    336: goto 701
+    356: BadMeterial()
+    357: goto 701
+    377: BadMeterial()
+    378: goto 701
+    413: if !(r3.nowFood.noodle && r3.nowFood.kettle) goto 487
+    435: PutInMeterial(r2, r1, 'water_kettle')
+    460: r3[('vessel_' + r2)].pot_kettle._visible = true
+    481: SetIntV(800, r2, r1)
+    482: goto 617
+    502: if !r3.nowFood.noodle goto 578
+    524: PutInMeterial(r2, r1, 'noodle')
+    549: r3[('vessel_' + r2)].pot_kettle._visible = true
+    572: SetIntV(800, r2, r1, 'water_kettle')
+    573: goto 617
+    593: PutInMeterial(r2, r1)
+    616: SetIntV(800, r2, r1, 'water')
+    617: goto 701
+    637: BadMeterial()
+    638: goto 701
+    667: r3[('vessel_' + r2)].pot_kettle._visible = false
+    676: trace(('Pot default Mode : ' + r1))
+    700: DishLader('Pot', r1, r3.newDupName)
+    701: goto 1489
+    711: r0 := r1
+    721: if (r0 === 'vegetable') goto 822
+    734: if (r0 === 'meat') goto 866
+    747: if (r0 === 'noodle') goto 910
+    760: if (r0 === 'garlic') goto 931
+    773: if (r0 === 'chun') goto 936
+    786: if (r0 === 'oil') goto 980
+    799: if (r0 === 'kettle') goto 1024
+    812: if (r0 === 'sugar') goto 1068
+    817: goto 1112
+    837: PutInMeterial(r2, r1)
+    860: SetIntV(800, r2, r1, 'defaultPan')
+    861: goto 1145
+    881: PutInMeterial(r2, r1)
+    904: SetIntV(800, r2, r1, 'defaultPan')
+    905: goto 1145
+    925: BadMeterial()
+    926: goto 1145
+    931: goto 1145
+    951: PutInMeterial(r2, r1)
+    974: SetIntV(800, r2, r1, 'defaultPan')
+    975: goto 1145
+    995: PutInMeterial(r2, r1)
+   1018: SetIntV(1000, r2, r1, 'defaultPan')
+   1019: goto 1145
+   1039: PutInMeterial(r2, r1)
+   1062: SetIntV(800, r2, r1, 'defaultPan')
+   1063: goto 1145
+   1083: PutInMeterial(r2, r1)
+   1106: SetIntV(800, r2, r1, 'defaultPan')
+   1107: goto 1145
+   1120: trace(('Pan default Mode : ' + r1))
+   1144: DishLader('Pan', r1, r3.newDupName)
+   1145: goto 1489
+   1155: trace('-----------')
+   1161: trace('완성 시도')
+   1167: trace(r1)
+   1185: trace(r3[('btn_' + r1)]._currentframe)
+   1191: trace('-----------')
+   1219: if !(r3[('btn_' + r1)]._currentframe == 3) goto 1452
+   1233: if !(r1 == 'dish1') goto 1338
+   1243: trace('면')
+   1253: r3.noodle = true
+   1263: if !r3.zzazang goto 1308
+   1277: r3.cookComplete = true
+   1302: r3.vessel_dish3.gotoAndStop(4)
+   1303: goto 1333
+   1332: r3.vessel_dish3.gotoAndStop(2)
+   1333: goto 1447
+   1347: if !(r1 == 'dish2') goto 1447
+   1357: trace('짜장')
+   1367: r3.zzazang = true
+   1377: if !r3.noodle goto 1422
+   1391: r3.cookComplete = true
+   1416: r3.vessel_dish3.gotoAndStop(4)
+   1417: goto 1447
+   1446: r3.vessel_dish3.gotoAndStop(3)
+   1447: goto 1468
+   1467: BadMeterial()
+   1468: goto 1489
+   1488: BadMeterial()
+   1489: r3 := r3
+   1493: r3
+   1494: r2 := r2
+   1498: r2
+   1499: r1 := r1
+   1503: r1
+      }
+ 6430: CheckCooking = <fn>
+ 6436: <fn>
+      function (vesselName, meterialName, returnFr) {
+     12: r1 := vesselName
+     16: r1
+     23: r2 := meterialName
+     27: r2
+     34: r3 := _root
+     38: r3
+     52: nowFood[r2] = true
+     66: nowFood.vessel = r1
+     82: if !!(returnFr == undefine) goto 125
+    119: this[('vessel_' + r1)].gotoAndStop(returnFr)
+    120: goto 154
+    153: this[('vessel_' + r1)].gotoAndStop(r2)
+    172: if !((r1 == 'pot') && (r2 == 'kettle')) goto 207
+    201: r3[('vessel_' + r1)].pot_kettle._visible = true
+    202: goto 232
+    231: r3[('vessel_' + r1)].pot_kettle._visible = false
+    241: if !(r1 == 'pot') goto 267
+    261: r3.nowPot[r2] = true
+    262: goto 297
+    276: if !(r1 == 'pan') goto 297
+    296: r3.nowPan[r2] = true
+    297: r3 := r3
+    301: r3
+    302: r2 := r2
+    306: r2
+    307: r1 := r1
+    311: r1
+      }
+ 6789: PutInMeterial = <fn>
+ 6795: <fn>
+      function (btnName, frNo, gradeFrNo, gaugePoint) {
+      8: r1 := btnName
+     12: r1
+     45: _root[('btn_' + r1)].gotoAndStop(frNo)
+     84: _root[('btn_' + r1)].mc_dish.gotoAndStop(gradeFrNo)
+    110: MetaItemAction2(r1, frNo, gradeFrNo)
+    111: r1 := r1
+    115: r1
+      }
+ 6953: MakeFood = <fn>
+ 6959: <fn>
+      function (vesselName) {
+     12: r1 := this
+     16: r1
+     40: trace(('게이지 정도 : ' + r1.mc_gauge.gaugeMask._currentframe))
+     72: if !!(r1.mc_gauge.gaugeMask._currentframe > 10) goto 112
+     89: r2 := 0
+     93: r2
+    102: r3 := 1
+    106: r3
+    107: goto 627
+    173: if !((r1.mc_gauge.gaugeMask._currentframe > 10) && !(r1.mc_gauge.gaugeMask._currentframe > 50)) goto 209
+    186: r2 := 30
+    190: r2
+    199: r3 := 1
+    203: r3
+    204: goto 627
+    270: if !((r1.mc_gauge.gaugeMask._currentframe > 50) && !(r1.mc_gauge.gaugeMask._currentframe > 110)) goto 306
+    283: r2 := 70
+    287: r2
+    296: r3 := 1
+    300: r3
+    301: goto 627
+    367: if !((r1.mc_gauge.gaugeMask._currentframe > 110) && !(r1.mc_gauge.gaugeMask._currentframe > 200)) goto 403
+    380: r2 := 100
+    384: r2
+    393: r3 := 1
+    397: r3
+    398: goto 627
+    464: if !((r1.mc_gauge.gaugeMask._currentframe > 200) && !(r1.mc_gauge.gaugeMask._currentframe > 250)) goto 500
+    477: r2 := 70
+    481: r2
+    490: r3 := 4
+    494: r3
+    495: goto 627
+    561: if !((r1.mc_gauge.gaugeMask._currentframe > 250) && !(r1.mc_gauge.gaugeMask._currentframe > 290)) goto 597
+    574: r2 := 30
+    578: r2
+    587: r3 := 4
+    591: r3
+    592: goto 627
+    609: r2 := 0
+    613: r2
+    622: r3 := 4
+    626: r3
+    640: if !(vesselName == 'pot') goto 932
+    675: if !(r1.nowPot.kettle && r1.nowPot.noodle) goto 721
+    690: var meterialScore = 100
+    715: MakeFood('dish1', 3, r3, r2, 'boil_vegetable')
+    716: goto 871
+    752: if !(r1.nowPot.kettle && !r1.nowPot.noodle) goto 778
+    772: BadMeterial()
+    773: goto 871
+    809: if !(!r1.nowPot.kettle && r1.nowPot.noodle) goto 855
+    824: var meterialScore = 50
+    849: MakeFood('dish1', 3, r3, r2, 'boil_vegetable')
+    850: goto 871
+    870: BadMeterial()
+    894: _root.nowPot = new FoodTree()
+    908: Vessel_Info('Pot')
+    926: _root.noodleScore = (r2 + meterialScore)
+    927: goto 1629
+    937: trace('----------------')
+    943: trace('----------------')
+    958: trace(r1.nowPan.chun)
+    973: trace(r1.nowPan.dish1)
+    988: trace(r1.nowPan.dish2)
+    994: trace('----------------')
+   1000: trace('----------------')
+   1050: if !(_root.nowPan.chun && (r1.nowPan.vegetable || r1.nowPan.meat)) goto 1102
+   1060: trace('볶음짜장-한번에 다 털어 넣은')
+   1071: var meterialScore = 30
+   1096: MakeFood('dish2', 3, r3, r2, 'broil_zzazang')
+   1097: goto 1573
+   1149: if !((r1.nowPan.chun && !r1.nowPan.vegetable) && !r1.nowPan.dish1) goto 1201
+   1159: trace('볶음춘장')
+   1170: var meterialScore = 30
+   1195: MakeFood('dish2', 2, r3, r2, 'broil_chun')
+   1196: goto 1573
+   1232: if !(!r1.nowPan.chun && r1.nowPan.vegetable) goto 1284
+   1242: trace('야채볶음완성')
+   1253: var meterialScore = 50
+   1278: MakeFood('dish1', 2, r3, r2, 'broil_vegetable')
+   1279: goto 1573
+   1314: if !(r1.nowPan.chun && r1.nowPan.dish1) goto 1366
+   1324: trace('짜장1(야채볶음+생춘장)')
+   1335: var meterialScore = 70
+   1360: MakeFood('dish2', 3, r3, r2, 'broil_zzazang')
+   1361: goto 1573
+   1402: if !((r1.nowPan.dish2 == 'chunzang') && r1.nowPan.dish1) goto 1454
+   1412: trace('짜장2(야채볶음+볶음춘장)')
+   1423: var meterialScore = 100
+   1448: MakeFood('dish2', 3, r3, r2, 'broil_zzazang')
+   1449: goto 1573
+   1505: if !((r1.nowPan.dish2 == 'chunzang') && (r1.nowPan.vegetable || r1.nowPan.meat)) goto 1557
+   1515: trace('짜장1(야채+고기+볶음춘장)')
+   1526: var meterialScore = 80
+   1551: MakeFood('dish2', 3, r3, r2, 'broil_zzazang')
+   1552: goto 1573
+   1572: BadMeterial()
+   1596: _root.nowPan = new FoodTree()
+   1610: Vessel_Info('Pan')
+   1628: _root.zzazangScore = (r2 + meterialScore)
+   1629: r3 := r3
+   1633: r3
+   1634: r2 := r2
+   1638: r2
+   1639: r1 := r1
+   1643: r1
+      }
+ 8622: CookMeterial = <fn>
+ 8628: <fn>
+      function () {
+     10: r2 := _root
+     14: r2
+     20: trace('금지 사운드 시작')
+     26: trace('--------------------')
+     48: r2.badSound0.stop('badSound0')
+     70: r2.badSound1.stop('badSound1')
+     80: r1 := random(2)
+     84: r1
+    111: r2[('badSound' + r1)].start()
+    112: r2 := r2
+    116: r2
+    117: r1 := r1
+    121: r1
+      }
+ 8758: BadMeterial = <fn>
+ 8764: <fn>
+      function (vesselName, dishName, insName) {
+     12: r1 := vesselName
+     16: r1
+     23: r2 := _root
+     27: r2
+     34: r3 := insName
+     38: r3
+     44: trace('------------')
+     51: trace(dishName)
+     57: trace(r3)
+     72: trace(r2[r3]._currentframe)
+     78: trace('------------')
+     92: if !(dishName == 'dish1') goto 262
+    121: if !(r2[r3]._currentframe == 2) goto 194
+    134: trace(('야채볶음' + r1))
+    144: if !(r1 == 'Pan') goto 173
+    167: r2[('now' + r1)].dish1 = true
+    168: goto 189
+    188: BadMeterial()
+    189: goto 257
+    202: trace(('면' + r1))
+    212: if !(r1 == 'Pot') goto 241
+    235: r2[('now' + r1)].dish1 = true
+    236: goto 257
+    256: BadMeterial()
+    257: goto 352
+    286: if !(r2[r3]._currentframe == 2) goto 324
+    299: trace(('춘장' + r1))
+    318: r2[('now' + r1)].dish2 = 'chunzang'
+    319: goto 352
+    342: r2[('now' + r1)].dish2 = 'zzazang'
+    351: trace(('짜장' + r1))
+    352: r3 := r3
+    356: r3
+    357: r2 := r2
+    361: r2
+    362: r1 := r1
+    366: r1
+      }
+ 9167: DishLader = <fn>
+ 9173: <fn>
+      function () {
+      5: trace('----------- FoodTree ------------')
+     21: trace(('vegetable  : ' + nowFood.vegetable))
+     37: trace(('meat  : ' + nowFood.meat))
+     53: trace(('noodle  : ' + nowFood.noodle))
+     69: trace(('garlic  : ' + nowFood.garlic))
+     85: trace(('chun  : ' + nowFood.chun))
+    101: trace(('sugar  : ' + nowFood.sugar))
+    117: trace(('oil  : ' + nowFood.oil))
+    133: trace(('kettle  : ' + nowFood.kettle))
+    149: trace(('dish1  : ' + nowFood.dish1))
+    165: trace(('dish2  : ' + nowFood.dish2))
+    181: trace(('dish  : ' + nowFood.dish3))
+    187: trace('------------------------------')
+      }
+ 9369: PrintTree = <fn>
+ 9375: <fn>
+      function (vesselName) {
+     10: r1 := vesselName
+     14: r1
+     21: r2 := this
+     25: r2
+     40: trace((('----------- ' + r1) + ' ------------'))
+     61: trace(('vegetable  : ' + r2[('now' + r1)].vegetable))
+     82: trace(('meat  : ' + r2[('now' + r1)].meat))
+    103: trace(('noodle  : ' + r2[('now' + r1)].noodle))
+    124: trace(('garlic  : ' + r2[('now' + r1)].garlic))
+    145: trace(('chun  : ' + r2[('now' + r1)].chun))
+    166: trace(('sugar  : ' + r2[('now' + r1)].sugar))
+    187: trace(('oil  : ' + r2[('now' + r1)].oil))
+    208: trace(('kettle  : ' + r2[('now' + r1)].kettle))
+    229: trace(('dish1  : ' + r2[('now' + r1)].dish1))
+    250: trace(('dish2  : ' + r2[('now' + r1)].dish2))
+    271: trace(('dish  : ' + r2[('now' + r1)].dish3))
+    277: trace('------------------------------')
+    278: r2 := r2
+    282: r2
+    283: r1 := r1
+    287: r1
+      }
+ 9682: Vessel_Info = <fn>
+ 9688: <fn>
+      function (vesselName, typeNo) {
+      8: r1 := _root
+     12: r1
+     22: trace(('조리클립 ' + vesselName))
+     36: if !(vesselName == 'pot') goto 78
+     72: r1[('vessel_' + nowFood.vessel)].gotoAndStop('boil')
+     73: goto 179
+     91: if !nowPan.vegetable goto 140
+    134: r1[('vessel_' + nowFood.vessel)].gotoAndStop(('broil_vegetable' + typeNo))
+    135: goto 179
+    178: r1[('vessel_' + nowFood.vessel)].gotoAndStop(('broil_chun' + typeNo))
+    179: r1 := r1
+    183: r1
+      }
+ 9898: DecoAction = <fn>
+ 9904: <fn>
+      function () {
+      8: r1 := _root
+     12: r1
+     24: trace(('짜장 점수 : ' + r1.zzazangScore))
+     36: trace(('면 점수 : ' + r1.noodleScore))
+     45: removeMovieClip(r1.godHand)
+     67: mouse.show()
+     89: r1.foodScore = (r1.zzazangScore + r1.noodleScore)
+    108: if !(r1.foodScore > 350) goto 124
+    113: gotoFrame(3304)
+    118: play()
+    119: goto 183
+    161: if !(!(r1.foodScore > 350) && (r1.foodScore > 280)) goto 177
+    166: gotoFrame(3889)
+    171: play()
+    172: goto 183
+    177: gotoFrame(4401)
+    182: play()
+    183: r1 := r1
+    187: r1
+      }
+10100: GotoEnding = <fn>
+10118: nowFood = new FoodTree()
+10136: nowPan = new FoodTree()
+10154: nowPot = new FoodTree()
+10170: DefaultSetting()
+[MAIN f3266] DoAction
+   26: MouseCursor()
+   56: MetaCookButton()
+[MAIN f3266] DoAction
+   36: zing_sound.start()
+[MAIN f3278] DoAction
+  269: trace('정지 ---')
+  270: stop()
+  286: MetaCookButton()
+  302: MetaHelp()
+  316: MetaItemAction('vegetable')
+  330: MetaItemAction('meat')
+  344: MetaItemAction('noodle')
+  358: MetaItemAction('garlic')
+  372: MetaItemAction('chun')
+  386: MetaItemAction('sugar')
+  400: MetaItemAction('oil')
+  414: MetaItemAction('kettle')
+  434: _root.dishArrow._visible = false
+  462: _root.dishArrow.stop()
+  474: <fn>
+      function () {
+      8: r1 := _root
+     12: r1
+     22: if !r1.cookComplete goto 50
+     44: r1.GotoEnding()
+     45: goto 278
+     98: if !((r1.btn_dish1._currentframe == 3) && (r1.btn_dish2._currentframe == 3)) goto 172
+    126: r1.dishArrow.play()
+    142: r1.dishArrow._visible = true
+    166: r1.needComplete.start()
+    167: goto 278
+    220: if !((r1.btn_dish1._currentframe > 1) || (r1.btn_dish2._currentframe > 1)) goto 254
+    248: r1.moreComplete.start()
+    249: goto 278
+    277: r1.badSound2.start()
+    278: r1 := r1
+    282: r1
+      }
+  765: btn_complete.onRelease = <fn>
+[MAIN f3303] DoAction
+    0: stop()
+[MAIN f3304] DoAction
+   12: trace('엔딩1')
+[MAIN f3305] DoAction
+   36: zing_sound.start()
+[MAIN f3888] DoAction
+   29: this.stop()
+[MAIN f3890] DoAction
+   36: zing_sound.start()
+[MAIN f4400] DoAction
+   29: this.stop()
+[MAIN f4402] DoAction
+   36: zing_sound.start()
+[MAIN f4836] DoAction
+    0: stopAllSounds()
+[MAIN f4844] DoAction
+   44: _root.failBGM.start()
+[MAIN f4864] DoAction
+   29: this.stop()
+[SPR41 f166] DoAction
+    0: stop()
+   37: _root.checkAllow()
+[SPR104 f1] LABEL defaultPan
+[SPR104 f1] DoAction
+    0: stop()
+[SPR104 f3] LABEL noodle
+[SPR104 f4] LABEL kettle
+[SPR104 f5] LABEL water
+[SPR104 f6] LABEL water_kettle
+[SPR104 f7] LABEL boil
+[SPR104 f8] LABEL overBoil
+[SPR104 f35] DoAction
+   29: this.stop()
+[SPR123 f7] DoAction
+   29: this.stop()
+[SPR126 f5] DoAction
+   29: this.stop()
+[SPR143 f13] DoAction
+   29: this.stop()
+[SPR148 f11] DoAction
+   29: this.stop()
+[SPR213 f1] LABEL 춘장볶기
+[SPR246 f1] DoAction
+   29: this.stop()
+[SPR246 f1] LABEL defaultPan
+[SPR246 f2] LABEL kettle
+[SPR246 f8] LABEL chun
+[SPR246 f13] LABEL sugar
+[SPR246 f18] LABEL oil
+[SPR246 f24] LABEL meat
+[SPR246 f31] LABEL vegetable
+[SPR246 f36] LABEL broil_vegetable1
+[SPR246 f37] LABEL broil_vegetable2
+[SPR246 f38] LABEL broil_vegetable3
+[SPR246 f39] LABEL broil_chun1
+[SPR246 f40] LABEL broil_chun2
+[SPR246 f41] LABEL broil_chun3
+[SPR256 f1] DoAction
+    0: stop()
+[SPR269 f1] LABEL 설익은구간
+[SPR269 f1] DoAction
+   29: this.stop()
+[SPR269 f2] DoAction
+   84: _root.RipeFood(_root.nowFood, 0)
+  125: _root.DecoAction(_root.nowFood.vessel, 1)
+[SPR269 f87] DoAction
+   62: _root.RipeFood(_root.nowFood, 50)
+[SPR269 f98] DoAction
+   77: _root.DecoAction(_root.nowFood.vessel, 2)
+[SPR269 f136] DoAction
+   62: _root.RipeFood(_root.nowFood, 80)
+[SPR269 f192] DoAction
+   62: _root.RipeFood(_root.nowFood, 120)
+[SPR269 f230] DoAction
+   80: _root.RipeFood(_root.nowFood, 150)
+  121: _root.DecoAction(_root.nowFood.vessel, 3)
+[SPR269 f300] DoAction
+   28: stop()
+   63: _root.RipeFood(_root.nowFood, 200)
+[SPR286 f1] DoAction
+    0: stop()
+[SPR317 f1] DoAction
+    0: stop()
+[SPR317 f4] LABEL 탄것
+[SPR320 f1] DoAction
+    0: stop()
+[SPR329 f1] DoAction
+    0: stop()
+[SPR329 f4] LABEL 탄것
+[SPR330 f1] DoAction
+    0: stop()
+[SPR353 f1] DoAction
+    0: stop()
+[SPR361 f1] DoAction
+    0: stop()
+[SPR361 f4] LABEL 탄거
+[SPR375 f1] DoAction
+    0: stop()
+[SPR385 f1] DoAction
+    0: stop()
+[SPR434 f1] DoAction
+    0: stop()
+[SPR439 f1] DoAction
+    0: stop()
+[SPR442 f1] DoAction
+    0: stop()
+[SPR445 f1] DoAction
+    0: stop()
+[SPR446 f1] DoAction
+    0: stop()
+[SPR447 f1] DoAction
+    0: stop()
+[SPR506 f1] DoAction
+    0: stop()
+[SPR508 f1] DoAction
+    0: stop()
+[SPR544 f2] DoAction
+   29: this.stop()
+[BUTTON 272] cond=0x8
+    0: stopAllSounds()
+    1: gotoFrame(3266)
+    6: play()
+[BUTTON 626] cond=0x8
+    0: gotoFrame(3304)
+    5: play()
+[BUTTON 627] cond=0x8
+    0: stopAllSounds()
+    1: gotoFrame(3266)
+    6: play()
