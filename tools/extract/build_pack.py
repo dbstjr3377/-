@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from PIL import Image, ImageChops, ImageStat
 from swflib import Swf
 
-SWF, CAP, END, MASK, OUT = sys.argv[1:6]
+SWF, CAP, END, MASK, OUT, DEMO = sys.argv[1:7]
 S = 1.5
 NS = 'ddinghowa'
 PACK = os.path.join(OUT, 'pack')
@@ -95,6 +95,52 @@ def ending(at):
 for at in (3304, 3889, 4401):
     ending(at)
 
+# ---------- demo (frames 170..3265, one capture per 6 frames) ----------
+def demo():
+    fs = sorted(f for f in os.listdir(DEMO) if f.startswith('d_') and f.endswith('.png'))
+    seq = []; prev = None; base_img = None; base_id = None
+    DS = 0.6                       # 시연 텍스처 배율 (용량 절약)
+    DW, DH = round(550 * DS), round(413 * DS)
+    stage_area = DW * DH
+    keyframes = 0; overlay_px = 0
+    for i, f in enumerate(fs):
+        if 170 + 6 * i > 3265: break
+        im = Image.open(os.path.join(DEMO, f)).convert('RGB').crop((0, 0, 550, 413)).resize((DW, DH), Image.LANCZOS)
+        if prev is not None and sum(ImageStat.Stat(ImageChops.difference(im, prev)).mean) / 3 < 0.4:
+            seq[-1][2] += 200; continue
+        prev = im
+        bb = None
+        if base_img is not None:
+            dm = ImageChops.difference(im, base_img).convert('L').point(lambda v: 255 if v > 10 else 0)
+            bb = dm.getbbox()
+        if base_img is None or (bb and (bb[2] - bb[0]) * (bb[3] - bb[1]) > 0.5 * stage_area):
+            base_img = im; keyframes += 1
+            base_id = add_texture('demo', im.convert('RGBA'), 0, 0, DS)
+            seq.append([base_id, None, 200]); continue
+        if not bb:
+            seq.append([base_id, None, 200]); continue
+        x0, y0, x1, y1 = bb
+        w = (x1 - x0 + 15) // 16 * 16; h = (y1 - y0 + 15) // 16 * 16
+        x0 = max(0, min(x0, DW - w)); y0 = max(0, min(y0, DH - h))
+        crop = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+        crop.paste(im.crop((x0, y0, min(DW, x0 + w), min(DH, y0 + h))).convert('RGBA'), (0, 0))
+        oid = add_texture('demo', crop, x0 / DS, y0 / DS, DS)
+        overlay_px += w * h
+        seq.append([base_id, oid, 200])
+    print('demo frames', len(seq), 'keyframes', keyframes, 'overlay px', overlay_px)
+    # 사운드: 스트림 + f190 배경음(loops 999) + f2478 효과음
+    blocks = {}; fr = 1
+    for code, body, raw in s.tags:
+        if code == 1: fr += 1
+        elif code == 19: blocks[fr] = body[4:]
+    data = b''.join(blocks[f] for f in range(170, 3266) if f in blocks)
+    p = f'{tmp}/demo_stream.mp3'; open(p, 'wb').write(data); to_ogg(p, 'demo_stream')
+    first = min(f for f in range(170, 3266) if f in blocks)
+    btn = manifest['groups']['btn_qstart']['up']
+    manifest['demo'] = {'frames': seq, 'stream': 'demo_stream', 'streamDelayMs': round((first - 170) * 1000 / 30),
+                        'bgm': 'demo_bgm', 'bgmDelayMs': round((190 - 170) * 1000 / 30), 'bgmPeriodMs': 4080,
+                        'events': [[round((2478 - 170) * 1000 / 30), 'end_s457']], 'button': btn}
+
 # ---------- mask ----------
 m = Image.open(MASK).convert('RGBA')
 m = m.resize((round(m.width * 512 / m.height), 512), Image.LANCZOS)
@@ -120,9 +166,6 @@ def sprite_model(tid):
             'faces': {'north': {'uv': [0, 0, 16, 16], 'texture': '#t'}}
         }]
     }
-for tid in list(frames):
-    json.dump(sprite_model(tid), open(f'{PACK}/assets/{NS}/models/item/{tid}.json', 'w'))
-    json.dump({'model': {'type': 'minecraft:model', 'model': f'{NS}:item/{tid}'}}, open(f'{PACK}/assets/{NS}/items/{tid}.json', 'w'))
 manifest['tilt'] = TILT
 
 # mask model: flat plane in front of the face, larger than the head
@@ -146,8 +189,8 @@ mask_model = {
         'fixed': {'rotation': [0, 180, 0], 'translation': [0, 1.5, 0], 'scale': [0.6, 0.6, 0.6]},
         'thirdperson_righthand': {'rotation': [0, 180, 0], 'translation': [0, 2, 1], 'scale': [0.3, 0.3, 0.3]},
         'thirdperson_lefthand': {'rotation': [0, 180, 0], 'translation': [0, 2, 1], 'scale': [0.3, 0.3, 0.3]},
-        'firstperson_righthand': {'rotation': [0, 160, 0], 'translation': [1, 2, 0], 'scale': [0.15, 0.15, 0.15]},
-        'firstperson_lefthand': {'rotation': [0, 200, 0], 'translation': [-1, 2, 0], 'scale': [0.15, 0.15, 0.15]}
+        'firstperson_righthand': {'rotation': [0, 200, 0], 'translation': [2, 4, -2], 'scale': [0.07, 0.07, 0.07]},
+        'firstperson_lefthand': {'rotation': [0, 160, 0], 'translation': [-2, 4, -2], 'scale': [0.07, 0.07, 0.07]}
     }
 }
 json.dump(mask_model, open(f'{PACK}/assets/{NS}/models/item/chef_mask.json', 'w'), indent=1)
@@ -157,7 +200,7 @@ json.dump({'model': {'type': 'minecraft:model', 'model': f'{NS}:item/chef_mask'}
 s = Swf(SWF)
 SND_NAMES = {1: 'hover', 17: 'take', 15: 'fail_bgm', 16: 'falling_water', 18: 'more_complete', 19: 'bad2',
              20: 'need_complete', 21: 'good1', 22: 'good0', 23: 'bad1', 24: 'bad0', 40: 'zing',
-             94: 'boil', 101: 'sizzle_short', 122: 'drop', 141: 'meat_drop', 153: 'broil',
+             94: 'boil', 287: 'demo_bgm', 101: 'sizzle_short', 122: 'drop', 141: 'meat_drop', 153: 'broil',
              457: 'end_s457', 543: 'arrow_s543', 620: 'end_s620', 631: 'end_s631', 646: 'end_s646', 667: 'end_s667', 690: 'end_s690'}
 tmp = os.path.join(OUT, 'snd_tmp'); os.makedirs(tmp, exist_ok=True)
 sounds_json = {}
@@ -238,8 +281,13 @@ for at, end in ((3304, 3888), (3889, 4400), (4401, 4864)):
             sid = struct.unpack('<H', body[:2])[0]
             if str(sid) in manifest['sounds']: ev.append([round((fr - at) * 1000 / 30), manifest['sounds'][str(sid)]])
     manifest['endings'][str(at)]['events'] = ev
+demo()
 json.dump(sounds_json, open(f'{PACK}/assets/{NS}/sounds.json', 'w'), indent=1)
 shutil.rmtree(tmp)
+
+for tid in list(frames):
+    json.dump(sprite_model(tid), open(f'{PACK}/assets/{NS}/models/item/{tid}.json', 'w'))
+    json.dump({'model': {'type': 'minecraft:model', 'model': f'{NS}:item/{tid}'}}, open(f'{PACK}/assets/{NS}/items/{tid}.json', 'w'))
 
 # ---------- meta ----------
 json.dump({'pack': {'description': '띵호와 주방장1 - 짜장면 만들기 (Minecraft)', 'min_format': 97, 'max_format': 99}},

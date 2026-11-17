@@ -46,7 +46,7 @@ public final class KitchenGame {
         }
     }
 
-    private enum Phase { PLAYING, ENDING }
+    private enum Phase { DEMO, PLAYING, ENDING }
 
     /** 마우스로 누를 수 있는 대상 (위에 있는 것부터) */
     private enum Target {
@@ -71,7 +71,7 @@ public final class KitchenGame {
 
     // layers (아래 → 위, 원본 depth 순서)
     private final Screen.Layer lBg, lChef, lDish1, lDish2, lPot, lPotKettle, lDish3, lPan, lGauge, lGaugeBar,
-            lComplete, lCookBtn, lArrow, lHelp, lTree, lTreeClose, lDrag, lHand, lEnding, lRetry;
+            lComplete, lCookBtn, lArrow, lHelp, lTree, lTreeClose, lDrag, lHand, lEnding, lRetry, lDemoBase, lDemoOverlay;
     private final java.util.Map<String, Screen.Layer> lIngredient = new java.util.HashMap<>();
 
     // controller
@@ -135,6 +135,13 @@ public final class KitchenGame {
 
     private final Set<String> playingSounds = new HashSet<>();
 
+    // 시연 (메인 타임라인 170~3265 프레임, '바로시작!' 으로 건너뜀)
+    private long demoStart, demoNextBgm;
+    private int demoEventIdx;
+    private boolean demoStreamStarted, demoZing;
+    private final Set<UUID> votes = new HashSet<>();
+    public static final double SKIP_RATIO = 0.7;
+
     public KitchenGame(DdinghowaPlugin plugin, AssetManifest assets, Screen screen, Player controller) {
         this.plugin = plugin;
         this.A = assets;
@@ -162,9 +169,11 @@ public final class KitchenGame {
         lHand = screen.layer("hand");
         lEnding = screen.layer("ending");
         lRetry = screen.layer("retry");
+        lDemoBase = screen.layer("demo_base");
+        lDemoOverlay = screen.layer("demo_overlay");
         setController(controller);
         screen.keepLoaded(true);
-        startRound();
+        startDemo();
     }
 
     // ================================================================ 외부 API
@@ -188,6 +197,7 @@ public final class KitchenGame {
     /** 조작자가 클릭함 (좌클릭 = 마우스 클릭) */
     public void click() {
         if (Double.isNaN(mx)) return;
+        if (phase == Phase.DEMO) return;   // 시연 중에는 vote() 로 처리
         if (phase == Phase.ENDING) {
             if (endingFinalShown() && targetAt(mx, my) == Target.RETRY) {
                 sound("hover");
@@ -251,7 +261,99 @@ public final class KitchenGame {
         endingKey = null;
         lEnding.hide();
         lRetry.hide();
+        lDemoBase.hide();
+        lDemoOverlay.hide();
+        screen.removeText("vote");
+        votes.clear();
         sound("zing");
+    }
+
+    // ================================================================ 시연 (프레임 170 ~ 3265)
+
+    /** 커튼이 열린 뒤 메뉴 화면 + 주방장 시연. 원본 '바로시작!' 버튼(btn_qstart)이 있는 구간 */
+    public void startDemo() {
+        stopAllSounds();
+        phase = Phase.DEMO;
+        demoStart = nowMs;
+        demoEventIdx = 0;
+        demoStreamStarted = false;
+        demoZing = false;
+        demoNextBgm = -1;
+        votes.clear();
+        drag = null;
+        pressed = null;
+        hover = null;
+        lEnding.hide();
+        lRetry.hide();
+        lBg.hide();
+        hideGameLayers();
+    }
+
+    public boolean inDemo() { return phase == Phase.DEMO; }
+
+    /** 투표에 필요한 인원: 접속자의 70% (올림) */
+    public int votesNeeded() {
+        return Math.max(1, (int) Math.ceil(Bukkit.getOnlinePlayers().size() * SKIP_RATIO - 1e-9));
+    }
+
+    public int votes() {
+        votes.removeIf(id -> Bukkit.getPlayer(id) == null);
+        return votes.size();
+    }
+
+    /** 플레이어가 클릭: 자기 시선이 '바로시작!' 버튼 위면 투표 */
+    public boolean vote(Player p) {
+        if (phase != Phase.DEMO) return false;
+        double[] pt = screen.stagePoint(p.getEyeLocation());
+        if (pt == null || !A.hit(A.frame(A.demo.button()), pt[0], pt[1])) return false;
+        if (!votes.add(p.getUniqueId())) return true;
+        sound("hover");
+        int have = votes(), need = votesNeeded();
+        Bukkit.broadcast(net.kyori.adventure.text.Component.text("[띵호와 주방장] " + p.getName() + " 님이 바로시작!을 눌렀습니다 (" + have + "/" + need + ")",
+                net.kyori.adventure.text.format.NamedTextColor.GOLD));
+        if (have >= need) skipDemo();
+        return true;
+    }
+
+    /** '바로시작!' (btn_qstart): stopAllSounds(); gotoAndPlay(3266) */
+    public void skipDemo() {
+        if (phase != Phase.DEMO) return;
+        stopAllSounds();
+        startRound();
+    }
+
+    private void tickDemo() {
+        AssetManifest.Demo d = A.demo;
+        long t = nowMs - demoStart;
+        if (!demoZing && t >= 33) { demoZing = true; sound("zing"); }           // f171 zing_sound.start()
+        if (!demoStreamStarted && t >= d.streamDelayMs()) { demoStreamStarted = true; sound(d.stream()); }
+        if (demoNextBgm < 0 && t >= d.bgmDelayMs()) demoNextBgm = d.bgmDelayMs();
+        if (demoNextBgm >= 0 && t >= demoNextBgm) {                            // f190 StartSound(287, loops 999)
+            sound(d.bgm());
+            demoNextBgm += d.bgmPeriodMs();
+        }
+        while (demoEventIdx < d.events().size() && t >= d.events().get(demoEventIdx).getKey()) {
+            sound(d.events().get(demoEventIdx).getValue());
+            demoEventIdx++;
+        }
+        if (t >= d.totalMs()) {
+            // 시연이 끝나면 타임라인이 그대로 3266 (게임 시작) 으로 넘어감. f3236 stopAllSounds
+            stopAllSounds();
+            startRound();
+            return;
+        }
+        long acc = 0;
+        for (AssetManifest.DemoFrame f : d.frames()) {
+            if (t < acc + f.durationMs()) {
+                lDemoBase.show(A.frame(f.base()));
+                if (f.overlay() != null) lDemoOverlay.show(A.frame(f.overlay()));
+                else lDemoOverlay.hide();
+                break;
+            }
+            acc += f.durationMs();
+        }
+        AssetManifest.Frame b = A.frame(d.button());
+        screen.setText("vote", "바로시작! " + votes() + "/" + votesNeeded() + " (70%)", b.cx(), b.y() - 15, 11, false);
     }
 
     // ================================================================ tick
@@ -260,7 +362,9 @@ public final class KitchenGame {
         nowMs += 50;
         Player p = Bukkit.getPlayer(controller);
         updateMouse(p);
-        if (phase == Phase.PLAYING) {
+        if (phase == Phase.DEMO) {
+            tickDemo();
+        } else if (phase == Phase.PLAYING) {
             tickLogic();
             renderPlaying();
         } else {
@@ -880,6 +984,7 @@ public final class KitchenGame {
             p.playSound(c, key, SoundCategory.RECORDS, plugin.soundVolume(), 1f);
         }
         playingSounds.add(key);
+        if (plugin.logSounds()) plugin.getLogger().info("[snd] " + System.currentTimeMillis() + " " + name);
     }
 
     private void stopSound(String name) {
@@ -893,6 +998,7 @@ public final class KitchenGame {
         List<Player> ls = listeners();
         for (String k : playingSounds) for (Player p : ls) p.stopSound(k, SoundCategory.RECORDS);
         playingSounds.clear();
+        if (plugin.logSounds()) plugin.getLogger().info("[sndstop] " + System.currentTimeMillis());
     }
 
     private List<Player> listeners() {

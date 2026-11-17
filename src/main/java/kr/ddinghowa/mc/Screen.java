@@ -51,8 +51,6 @@ public final class Screen {
     private final float viewRange;
     private final Map<String, ItemStack> itemCache = new HashMap<>();
     private final List<Layer> layers = new ArrayList<>();
-    private TextDisplay label;
-    private String labelText = "";
     private int labelLayer;
 
     public Screen(Plugin plugin, AssetManifest assets, Location center, float yaw, double widthBlocks,
@@ -201,42 +199,59 @@ public final class Screen {
         });
     }
 
-    // ------------------------------------------------------------------ label
+    // ------------------------------------------------------------------ text
+
+    private final Map<String, TextDisplay> texts = new HashMap<>();
+    private final Map<String, String> textValues = new HashMap<>();
 
     /** 좌상단 "조작 : 이름" 표시. (x,y) = 텍스트 왼쪽 위 (스테이지 좌표), 글자 높이 px */
     public void setLabel(String text, double x, double y, double pxHeight) {
-        if (label == null || !label.isValid()) {
+        setText("label", text, x, y, pxHeight, true);
+    }
+
+    /**
+     * 화면 위 글자. anchorLeft 면 (x,y)=왼쪽 위, 아니면 (x,y)=가운데 위.
+     * 텍스트 디스플레이: 1 글꼴 px = 0.025 블록, 한 줄 ~10px. 원점 = 글 상자 아래 가운데.
+     */
+    public void setText(String key, String text, double x, double y, double pxHeight, boolean anchorLeft) {
+        TextDisplay d = texts.get(key);
+        if (d == null || !d.isValid()) {
             Location loc = center.clone();
             loc.setYaw(yaw);
             loc.setPitch(0);
-            label = world.spawn(loc, TextDisplay.class, d -> {
-                d.setPersistent(false);
-                d.setBrightness(new Display.Brightness(15, 15));
-                d.setBillboard(Display.Billboard.FIXED);
-                d.setShadowed(true);
-                d.setLineWidth(10000);
-                d.setAlignment(TextDisplay.TextAlignment.LEFT);
-                d.setBackgroundColor(org.bukkit.Color.fromARGB(150, 0, 0, 0));
-                d.setViewRange(viewRange);
-                d.getPersistentDataContainer().set(TAG, PersistentDataType.BYTE, (byte) 1);
+            d = world.spawn(loc, TextDisplay.class, e -> {
+                e.setPersistent(false);
+                e.setBrightness(new Display.Brightness(15, 15));
+                e.setBillboard(Display.Billboard.FIXED);
+                e.setShadowed(true);
+                e.setLineWidth(10000);
+                e.setAlignment(TextDisplay.TextAlignment.LEFT);
+                e.setBackgroundColor(org.bukkit.Color.fromARGB(150, 0, 0, 0));
+                e.setViewRange(viewRange);
+                e.getPersistentDataContainer().set(TAG, PersistentDataType.BYTE, (byte) 1);
             });
-            labelText = "";
+            texts.put(key, d);
+            textValues.remove(key);
         }
-        if (!text.equals(labelText)) {
-            label.text(Component.text(text));
-            labelText = text;
+        if (!text.equals(textValues.get(key))) {
+            d.text(Component.text(text));
+            textValues.put(key, text);
         }
-        // 텍스트 디스플레이: 1 글꼴 px = 0.025 블록, 한 줄 높이 ~10px(배경 포함). 원점 = 글 상자 아래 가운데
         float scale = (float) (pxHeight * k / 0.25);
-        double widthFontPx = textWidth(text) + 2;
-        double widthStage = widthFontPx * 0.025 * scale / k;
-        double cx = x + widthStage / 2;
+        double widthStage = (textWidth(text) + 2) * 0.025 * scale / k;
+        double cx = anchorLeft ? x + widthStage / 2 : x;
         double bottom = y + pxHeight;
         Vector3f t = new Vector3f(
                 (float) ((cx - assets.stageW / 2) * k),
                 (float) ((assets.stageH / 2 - bottom) * k),
                 (labelLayer + 1) * LAYER_GAP);
-        label.setTransformation(new Transformation(t, new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
+        d.setTransformation(new Transformation(t, new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
+    }
+
+    public void removeText(String key) {
+        TextDisplay d = texts.remove(key);
+        textValues.remove(key);
+        if (d != null) d.remove();
     }
 
     /** 마인크래프트 기본 글꼴 기준 대략적인 폭(px) */
@@ -286,8 +301,8 @@ public final class Screen {
 
     public void destroy() {
         for (Layer l : layers) l.remove();
-        if (label != null) label.remove();
-        label = null;
+        for (TextDisplay d : texts.values()) d.remove();
+        texts.clear();
         keepLoaded(false);
     }
 }

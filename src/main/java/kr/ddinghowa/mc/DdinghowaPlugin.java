@@ -106,6 +106,8 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     float soundVolume() { return (float) getConfig().getDouble("sound.volume", 1.5); }
 
+    boolean logSounds() { return getConfig().getBoolean("debug.log-sounds", false); }
+
     // ------------------------------------------------------------ resource pack
 
     private void startHttp() {
@@ -177,15 +179,25 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
         float yaw = Math.round(eye.getYaw() / 90f) * 90f;           // 화면은 동서남북으로 정렬
         double rad = Math.toRadians(yaw);
         org.bukkit.util.Vector facing = new org.bukkit.util.Vector(-Math.sin(rad), 0, Math.cos(rad));
-        double dist = getConfig().getDouble("screen.distance", 5.5);
-        Location center = eye.clone().add(facing.multiply(dist));
-        double width = getConfig().getDouble("screen.width", 6.0);
-        double halfH = width * assets.stageH / assets.stageW / 2;
-        // 화면 아래쪽이 발밑보다 0.2블록 이상 위에 오도록
-        double minY = controller.getLocation().getY() + 0.2 + halfH;
-        center.setY(Math.max(center.getY() + getConfig().getDouble("screen.height-offset", 0.3), minY));
-        Screen screen = new Screen(this, assets, center, yaw + 180f,
-                width,
+        double width = getConfig().getDouble("screen.width", 4.0);
+        double aspect = assets.stageH / assets.stageW;
+        Location center;
+        if (getConfig().getBoolean("screen.fit-to-view", true)) {
+            // 화면 세로 = 클라이언트 세로 시야. 눈높이에 화면 중심을 두고, 세로 FOV 에 꼭 맞는 거리에 세운다.
+            double eyeH = eye.getY() - controller.getLocation().getY();
+            double maxH = 2 * (eyeH - 0.05);                          // 화면 아래가 땅에 묻히지 않게
+            if (width * aspect > maxH) width = maxH / aspect;
+            double fov = Math.toRadians(getConfig().getDouble("screen.fov", 70));
+            double dist = (width * aspect / 2) / Math.tan(fov / 2);
+            center = eye.clone().add(facing.multiply(dist));
+        } else {
+            double dist = getConfig().getDouble("screen.distance", 5.5);
+            center = eye.clone().add(facing.multiply(dist));
+            double halfH = width * aspect / 2;
+            double minY = controller.getLocation().getY() + 0.2 + halfH;
+            center.setY(Math.max(center.getY() + getConfig().getDouble("screen.height-offset", 0.0), minY));
+        }
+        Screen screen = new Screen(this, assets, center, yaw + 180f, width,
                 (float) getConfig().getDouble("screen.view-range", 1.5),
                 getConfig().getInt("render.tilt-sign", 1));
         game = new KitchenGame(this, assets, screen, controller);
@@ -236,8 +248,13 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSwing(PlayerArmSwingEvent e) {
-        if (!isController(e.getPlayer()) || e.getHand() != EquipmentSlot.HAND) return;
-        controllerClick();
+        if (game == null || e.getHand() != EquipmentSlot.HAND) return;
+        if (game.inDemo()) {
+            // 시연 중: 누구나 '바로시작!' 을 눌러 투표할 수 있음
+            game.vote(e.getPlayer());
+            return;
+        }
+        if (isController(e.getPlayer())) controllerClick();
     }
 
     @EventHandler
@@ -247,6 +264,11 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent e) {
+        if (game != null && game.inDemo() && e.getHand() == EquipmentSlot.HAND
+                && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            if (game.vote(e.getPlayer())) e.setCancelled(true);
+            return;
+        }
         if (!isController(e.getPlayer())) return;
         // 조작 중에는 블록 부수기/설치 방지
         if (e.getAction() == Action.LEFT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_BLOCK) e.setCancelled(true);
@@ -299,6 +321,7 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
                 Bukkit.broadcast(Component.text("[띵호와 주방장] ", NamedTextColor.GOLD)
                         .append(Component.text("짜장면 만들기 시작! 조작 : " + target.getName(), NamedTextColor.YELLOW)));
                 target.sendMessage(Component.text("화면을 바라보고 좌클릭 = 마우스 클릭. 재료를 클릭해서 집고, 냄비/팬/그릇에 다시 클릭해서 넣으세요.", NamedTextColor.GRAY));
+                Bukkit.broadcast(Component.text("시연을 건너뛰려면 화면의 '바로시작!' 버튼을 보고 클릭하세요. 접속자 70%가 누르면 바로 시작합니다.", NamedTextColor.GRAY));
             }
             case "stop", "종료" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
@@ -309,8 +332,13 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
             case "restart", "재시작" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
                 if (game == null) return noGame(sender);
-                game.startRound();
-                sender.sendMessage(Component.text("처음부터 다시 시작합니다.", NamedTextColor.YELLOW));
+                game.startDemo();
+                sender.sendMessage(Component.text("처음(시연)부터 다시 시작합니다.", NamedTextColor.YELLOW));
+            }
+            case "skip", "바로시작" -> {
+                if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
+                if (game == null) return noGame(sender);
+                game.skipDemo();
             }
             case "control", "조작" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
@@ -350,7 +378,8 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
                 if (args.length >= 4 && args[1].equals("click")) {
                     game.debugClickAt(Double.parseDouble(args[2]), Double.parseDouble(args[3]));
                 } else if (args.length >= 2 && args[1].equals("click")) {
-                    game.click();
+                    Player p = Bukkit.getPlayer(game.controller());
+                    if (game.inDemo() && p != null) game.vote(p); else game.click();
                 } else if (args.length >= 4 && args[1].equals("aim")) {
                     // 조작자의 시선을 스테이지 좌표 (x,y) 로 돌림 (실제 레이캐스트 경로 테스트용)
                     Player p = Bukkit.getPlayer(game.controller());
@@ -367,7 +396,8 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
                 sender.sendMessage(Component.text("띵호와 주방장1 - 짜장면 만들기", NamedTextColor.GOLD));
                 sender.sendMessage(Component.text("/" + label + " start [플레이어]  - 게임 시작 (그 플레이어가 조작)", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " stop  - 게임 종료", NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("/" + label + " restart  - 처음부터", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("/" + label + " restart  - 처음(시연)부터", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("/" + label + " skip  - 시연 강제 건너뛰기 (평소엔 접속자 70%가 화면의 '바로시작!' 클릭)", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " control <플레이어>  - 조작자 변경", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " mask [플레이어]  - 주방장 가면 지급", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " pack  - 리소스팩 다시 받기", NamedTextColor.YELLOW));
@@ -390,7 +420,7 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("start", "stop", "restart", "control", "mask", "pack")) {
+            for (String s : List.of("start", "stop", "restart", "skip", "control", "mask", "pack")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
         } else if (args.length == 2 && List.of("start", "control", "mask", "pack", "wear").contains(args[0].toLowerCase(Locale.ROOT))) {

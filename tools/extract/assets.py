@@ -96,6 +96,9 @@ job('drag_sugar', '0', [(510, (0.8, 0, 0, 0.8, 100, 100), None)])
 job('btn_retry', 'up', [(627, (0.937, 0, 0, 0.937, 452.55, 365.9), None)])
 job('btn_retry', 'over', [(627, (0.937, 0, 0, 0.937, 452.55, 365.9), None)], hover='CENTER')
 
+# '바로시작!' 버튼 (시연 화면, DefineButton 272)
+job('btn_qstart', 'up', [(272, (1, 0, 0, 1, 478.9, 369.3), None)])
+
 json.dump(jobs, open(f'{OUT}/jobs.json', 'w'))
 json.dump(groups, open(f'{OUT}/groups.json', 'w'))
 print(len(jobs), 'jobs')

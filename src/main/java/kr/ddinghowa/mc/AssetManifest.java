@@ -59,6 +59,19 @@ public final class AssetManifest {
     public final Map<String, Mask> masks = new HashMap<>();
     public final Map<String, Ending> endings = new HashMap<>();
     public final Frame gaugeBar;
+    public final Demo demo;
+
+    /** 시연(프레임 170~3265): 키프레임(base) + 바뀐 영역(overlay) */
+    public record DemoFrame(String base, String overlay, int durationMs) {}
+
+    public record Demo(List<DemoFrame> frames, String stream, int streamDelayMs, String bgm, int bgmDelayMs,
+                       int bgmPeriodMs, List<Map.Entry<Integer, String>> events, String button) {
+        public int totalMs() {
+            int t = 0;
+            for (DemoFrame f : frames) t += f.durationMs();
+            return t;
+        }
+    }
 
     public AssetManifest(InputStream in) {
         JsonObject root = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
@@ -101,6 +114,20 @@ public final class AssetManifest {
                     o.has("stream") ? o.get("stream").getAsString() : null,
                     o.has("streamDelayMs") ? o.get("streamDelayMs").getAsInt() : 0, ev));
         }
+        JsonObject d = root.getAsJsonObject("demo");
+        List<DemoFrame> dfs = new ArrayList<>();
+        for (JsonElement fe : d.getAsJsonArray("frames")) {
+            JsonArray a = fe.getAsJsonArray();
+            dfs.add(new DemoFrame(a.get(0).getAsString(), a.get(1).isJsonNull() ? null : a.get(1).getAsString(), a.get(2).getAsInt()));
+        }
+        List<Map.Entry<Integer, String>> dev = new ArrayList<>();
+        for (JsonElement ee : d.getAsJsonArray("events")) {
+            JsonArray a = ee.getAsJsonArray();
+            dev.add(Map.entry(a.get(0).getAsInt(), a.get(1).getAsString()));
+        }
+        demo = new Demo(dfs, d.get("stream").getAsString(), d.get("streamDelayMs").getAsInt(),
+                d.get("bgm").getAsString(), d.get("bgmDelayMs").getAsInt(), d.get("bgmPeriodMs").getAsInt(), dev,
+                d.get("button").getAsString());
         JsonObject g = root.getAsJsonObject("gaugeBar");
         gaugeBar = new Frame("solid_red", g.get("x").getAsDouble(), g.get("y").getAsDouble(),
                 g.get("w").getAsDouble(), g.get("h").getAsDouble());
