@@ -85,7 +85,7 @@ game-kingdom.tistory.com 에 올라온 플래시 게임 두 개를 SWF에서 추
 
 `docs/animations/chef_headshake/` — 엔딩 시작에서 주인공이 심사를 받으려고 짜장(짬뽕)을 들고 오는 동안, 테이블 뒤 주방장이 웃으며 고개를 좌우로 흔드는 반복 동작입니다. 원본 스프라이트(짜장면 cid 530 / 짬뽕 cid 531) 8프레임을 원본의 2배 해상도로 뽑았습니다.
 
-- `chef_headshake_jjajang.gif`, `chef_headshake_jjamppong.gif` — **주방장만 누끼 딴 투명 배경 GIF** (무한 반복)
+- `chef_headshake_jjajang_full.gif` / `chef_headshake_jjajang_head.gif` (짬뽕은 `jjamppong_full` / `jjamppong_head`) — **주방장만 누끼 딴 투명 배경 GIF**, 몸 전체 / 머리만 (무한 반복)
 - `jjajang/`, `jjamppong/` 아래 `full`(전신)·`head`(머리만) — PNG 프레임(`chef_headshake_NN.png`), 가로 스프라이트 시트, 애니메이션 명시 파일 `chef_headshake.anim.json`, 미리보기 GIF
 
 `anim.json` 의 `frames[].delay_ms` 가 각 프레임 표시 시간(원본 30fps 기준, 같은 그림이 이어지는 프레임은 합침: 67 → 67 → 133ms, 한 바퀴 0.27초)이고, `delay_ticks` 는 마인크래프트 틱(50ms) 단위입니다.
