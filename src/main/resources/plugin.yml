@@ -2,17 +2,17 @@ name: DdinghowaChef
 version: '1.0.0'
 main: kr.ddinghowa.mc.DdinghowaPlugin
 api-version: '26.3'
-description: 띵호와 주방장1 - 짜장면 만들기 (플래시 게임을 마인크래프트로 재구현)
+description: 띵호와 주방장 1·2 (짜장면 / 짬뽕) - 원본 플래시를 서버에서 실행해 지도 화면으로 보여 줌
 authors: [ddinghowa-mc]
 commands:
   ddinghowa:
     description: 띵호와 주방장 게임 명령어
-    usage: /<command> <start|stop|restart|control|mask|pack>
+    usage: /<command> <start|stop|restart|skip|control|mask|item|pack>
     aliases: [jjajang, 띵호와]
 permissions:
   ddinghowa.admin:
     description: 게임 시작/종료/조작자 변경
     default: op
   ddinghowa.mask:
-    description: 주방장 가면 받기
+    description: 가면·고개 흔드는 주방장·짬뽕 아이템 받기
     default: op

@@ -1,27 +1,33 @@
-# 띵호와 주방장 1·2 - 마인크래프트 설정
+# 띵호와 주방장 1·2 - 원본 플래시(SWF)를 서버에서 실행해 지도 화면으로 보여 줍니다.
 
-ui:
-  # true: 접속한 모든 플레이어 화면에 게임이 뜸 (시연 중 '바로시작!' 투표 가능)
-  # false: 조작자만 화면이 뜸 (다른 사람은 /ddinghowa watch 로 켜기)
-  everyone: true
-  # 고개를 위아래로 이만큼(도) 돌리면 커서가 화면 위 끝→아래 끝으로 이동 (가로는 화면 비율만큼)
-  cursor-fov: 70
+browser:
+  # 크롬/크로미움/엣지 실행 파일 경로. 비워 두면 흔한 설치 위치와 CHROME_PATH 환경변수에서 찾습니다.
+  # 예) /usr/bin/chromium   C:\Program Files\Google\Chrome\Application\chrome.exe
+  path: ""
+  # 화면을 가져오는 간격(ms). 작을수록 부드럽지만 대역폭/CPU 를 더 씁니다.
+  grab-interval-ms: 70
+  # 크롬에 더 넘길 인자
+  extra-args: []
+
+screen:
+  # 지도(128x128) 가로·세로 장 수. 기본 6x4 = 768x512 (원본 550x413 을 세로에 꽉 맞춤)
+  columns: 6
+  rows: 4
+  # 클라이언트 세로 시야각(FOV). 화면 세로가 시야에 꼭 맞는 거리에 벽을 세웁니다.
+  fov: 70
+  # 시작할 때 조작자를 화면 정중앙·딱 맞는 거리로 옮길지
+  move-controller: true
+  # 이 거리(블록) 안의 플레이어에게 화면을 보냄
+  view-range: 96
+  # 게임 중 모든 접속자의 손을 숨길지 (false 면 조작자만)
+  hide-hand-everyone: true
 
 resource-pack:
-  # 접속 시 리소스팩 자동 전송 (게임 화면/셰이더/효과음이 들어 있으므로 필수)
+  # 가면 / 고개 흔드는 주방장 / 짬뽕 / 손 숨기기용 투명 아이템이 든 작은 리소스팩 (약 0.5MB)
   enabled: true
-  # 내장 HTTP 서버 포트 (서버 방화벽/포트포워딩에서 열어주세요)
+  # 내장 HTTP 서버 포트 (public-url 을 쓰면 무시)
   port: 8163
-  # 직접 호스팅할 경우 전체 URL 입력 (비워두면 내장 서버 사용, 주소는 플레이어가 접속한 호스트명)
+  # 직접 올린 리소스팩 주소 (비우면 내장 서버 사용)
   public-url: ""
-  # true 면 리소스팩 거절 시 접속 불가
   required: false
-  prompt: "띵호와 주방장 게임 리소스팩을 받아주세요!"
-
-sound:
-  enabled: true
-  volume: 1.0
-
-debug:
-  # 효과음 재생 시각을 서버 로그에 기록 (동영상 녹화용)
-  log-sounds: false
+  prompt: "띵호와 주방장 가면/아이템 리소스팩"
