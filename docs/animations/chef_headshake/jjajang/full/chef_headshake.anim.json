@@ -1,0 +1,73 @@
+{
+  "name": "chef_headshake",
+  "description": "짜장면 엔딩 시작: 주인공이 짜장을 들고 오는 동안 테이블 뒤 주방장 (전신) - 웃으며 고개를 좌우로 흔드는 동작. 무한 반복(loop).",
+  "source": {
+    "swf": "original/ddinghowa1.swf",
+    "sprite_id": 530,
+    "sprite_frames": 8,
+    "swf_fps": 30,
+    "scene_main_timeline_frames": [
+      [
+        3304,
+        3376
+      ],
+      [
+        3889,
+        3961
+      ],
+      [
+        4401,
+        4473
+      ]
+    ],
+    "placement_in_stage_px": [
+      325.15,
+      33.0
+    ]
+  },
+  "frame_size": [
+    409,
+    600
+  ],
+  "render_scale": 2,
+  "anchor_in_stage_px": [
+    286.0,
+    30.0
+  ],
+  "loop": true,
+  "total_ms": 266.7,
+  "sheet": {
+    "file": "chef_headshake_sheet.png",
+    "layout": "horizontal",
+    "frame_count": 3
+  },
+  "frames": [
+    {
+      "file": "chef_headshake_00.png",
+      "delay_ms": 66.7,
+      "sprite_frames": [
+        1,
+        2
+      ],
+      "delay_ticks": 1.33
+    },
+    {
+      "file": "chef_headshake_01.png",
+      "delay_ms": 66.7,
+      "sprite_frames": [
+        3,
+        4
+      ],
+      "delay_ticks": 1.33
+    },
+    {
+      "file": "chef_headshake_02.png",
+      "delay_ms": 133.3,
+      "sprite_frames": [
+        5,
+        8
+      ],
+      "delay_ticks": 2.67
+    }
+  ]
+}
