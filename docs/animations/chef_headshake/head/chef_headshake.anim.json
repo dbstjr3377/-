@@ -1,0 +1,104 @@
+{
+  "name": "chef_headshake",
+  "description": "띵호와 주방장1 완벽 엔딩 심사 장면 - 주방장이 웃으며 고개를 좌우로 흔드는 동작 (주방장 머리만). 무한 반복(loop) 애니메이션.",
+  "source": {
+    "swf": "original/ddinghowa1.swf",
+    "timeline": "main",
+    "frames": [
+      3770,
+      3794
+    ],
+    "swf_fps": 30,
+    "layers": "depth 17(머리)"
+  },
+  "frame_size": [
+    338,
+    516
+  ],
+  "render_scale": 2,
+  "anchor_in_stage_px": [
+    289.0,
+    0.0
+  ],
+  "loop": true,
+  "total_ms": 833.3,
+  "sheet": {
+    "file": "chef_headshake_sheet.png",
+    "layout": "horizontal",
+    "frame_count": 8
+  },
+  "frames": [
+    {
+      "file": "chef_headshake_00.png",
+      "delay_ms": 100.0,
+      "source_frames": [
+        3770,
+        3772
+      ],
+      "delay_ticks": 2.0
+    },
+    {
+      "file": "chef_headshake_01.png",
+      "delay_ms": 66.7,
+      "source_frames": [
+        3773,
+        3774
+      ],
+      "delay_ticks": 1.33
+    },
+    {
+      "file": "chef_headshake_02.png",
+      "delay_ms": 133.3,
+      "source_frames": [
+        3775,
+        3778
+      ],
+      "delay_ticks": 2.67
+    },
+    {
+      "file": "chef_headshake_03.png",
+      "delay_ms": 100.0,
+      "source_frames": [
+        3779,
+        3781
+      ],
+      "delay_ticks": 2.0
+    },
+    {
+      "file": "chef_headshake_04.png",
+      "delay_ms": 133.3,
+      "source_frames": [
+        3782,
+        3785
+      ],
+      "delay_ticks": 2.67
+    },
+    {
+      "file": "chef_headshake_05.png",
+      "delay_ms": 66.7,
+      "source_frames": [
+        3786,
+        3787
+      ],
+      "delay_ticks": 1.33
+    },
+    {
+      "file": "chef_headshake_06.png",
+      "delay_ms": 100.0,
+      "source_frames": [
+        3788,
+        3790
+      ],
+      "delay_ticks": 2.0
+    },
+    {
+      "file": "chef_headshake_07.png",
+      "delay_ms": 133.3,
+      "source_frames": [
+        3791,
+        3794
+      ],
+      "delay_ticks": 2.67
+    }
+  ]
+}

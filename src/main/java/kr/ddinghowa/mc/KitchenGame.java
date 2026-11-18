@@ -14,8 +14,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 띵호와 주방장1 (짜장면 만들기) 게임 로직.
- * 원본 SWF 의 ActionScript 2 (메인 타임라인 3266~3278 프레임 스크립트) 를 그대로 옮긴 것.
+ * 띵호와 주방장1 (짜장면) / 띵호와 주방장2 (짬뽕) 게임 로직.
+ * 원본 SWF 의 ActionScript 2 (게임 시작 프레임 스크립트) 를 그대로 옮긴 것. 두 게임은 엔진이 같고
+ * 재료·게이지 길이·레시피·점수 규칙만 다르다 (jjamppong 분기).
  * 함수/변수 이름은 원본을 따른다 (CheckCooking, PutInMeterial, CookMeterial, DishLader ...).
  */
 public final class KitchenGame {
@@ -24,7 +25,7 @@ public final class KitchenGame {
 
     /** 원본 FoodTree 클래스 */
     static final class FoodTree {
-        boolean vegetable, meat, noodle, garlic, chun, sugar, oil, kettle, dish1, dish3;
+        boolean vegetable, meat, seaFood, noodle, garlic, chun, sugar, oil, kettle, dish1, dish3;
         String dish2;      // null | "chunzang" | "zzazang"
         String vessel;     // nowFood.vessel : "pot" | "pan" | null
 
@@ -32,6 +33,7 @@ public final class KitchenGame {
             switch (material) {
                 case "vegetable" -> vegetable = true;
                 case "meat" -> meat = true;
+                case "seaFood" -> seaFood = true;
                 case "noodle" -> noodle = true;
                 case "garlic" -> garlic = true;
                 case "chun" -> chun = true;
@@ -52,7 +54,8 @@ public final class KitchenGame {
     private enum Target {
         TREE_CLOSE, HELP, TAKE_OFF, TAKE_OUT, COMPLETE,
         KETTLE("kettle"), CHUN("chun"), SUGAR("sugar"), OIL("oil"), GARLIC("garlic"), NOODLE("noodle"),
-        DISH2("dish2"), DISH1("dish1"), MEAT("meat"), VEGETABLE("vegetable"), RETRY;
+        DISH2("dish2"), DISH1("dish1"), MEAT("meat"), VEGETABLE("vegetable"),
+        SEAFOOD("seaFood"), EGGM("eggM"), RETRY;
 
         final String material;
         Target() { this(null); }
@@ -61,18 +64,25 @@ public final class KitchenGame {
         boolean dish() { return material != null && material.startsWith("dish"); }
     }
 
-    private static final String[] INGREDIENTS = {"vegetable", "meat", "noodle", "garlic", "oil", "sugar", "chun", "kettle"};
+    /** 재료 버튼 (게임별) */
+    private final String[] ingredients;
+    /** 클릭 판정 순서 = 원본 depth 높은 것부터 (재료/접시) */
+    private final Target[] hitOrder;
+    /** 짬뽕(띵호와 주방장2) 여부 */
+    private final boolean jjamppong;
+    // 짬뽕: 양념/메추리알 점수
+    private double spiceScore, eggScore;
     private static final double FRAME_MS = 1000.0 / 30.0;
 
     private final DdinghowaPlugin plugin;
-    private final AssetManifest A;
-    private final Screen screen;
+    private final AssetManifest.GameAssets A;
+    private final UiScreen screen;
     private final Random random = new Random();
 
     // layers (아래 → 위, 원본 depth 순서)
-    private final Screen.Layer lBg, lChef, lDish1, lDish2, lPot, lPotKettle, lDish3, lPan, lGauge, lGaugeBar,
+    private final UiScreen.Layer lBg, lChef, lDish1, lDish2, lPot, lPotKettle, lDish3, lPan, lGauge, lGaugeBar,
             lComplete, lCookBtn, lArrow, lHelp, lTree, lTreeClose, lDrag, lHand, lEnding, lRetry, lDemoBase, lDemoOverlay;
-    private final java.util.Map<String, Screen.Layer> lIngredient = new java.util.HashMap<>();
+    private final java.util.Map<String, UiScreen.Layer> lIngredient = new java.util.HashMap<>();
 
     // controller
     private UUID controller;
@@ -142,43 +152,45 @@ public final class KitchenGame {
     private final Set<UUID> votes = new HashSet<>();
     public static final double SKIP_RATIO = 0.7;
 
-    public KitchenGame(DdinghowaPlugin plugin, AssetManifest assets, Screen screen, Player controller) {
+    public KitchenGame(DdinghowaPlugin plugin, AssetManifest.GameAssets assets, UiScreen screen, Player controller) {
         this.plugin = plugin;
         this.A = assets;
         this.screen = screen;
-        lBg = screen.layer("bg");
-        lChef = screen.layer("chef");
-        for (String m : new String[]{"vegetable", "meat"}) lIngredient.put(m, screen.layer("ing_" + m));
-        lDish1 = screen.layer("dish1");
-        lDish2 = screen.layer("dish2");
-        for (String m : new String[]{"noodle", "garlic", "oil", "sugar", "chun"}) lIngredient.put(m, screen.layer("ing_" + m));
-        lPot = screen.layer("pot");
-        lPotKettle = screen.layer("potkettle");
-        lIngredient.put("kettle", screen.layer("ing_kettle"));
-        lDish3 = screen.layer("dish3");
-        lPan = screen.layer("pan");
-        lGauge = screen.layer("gauge");
-        lGaugeBar = screen.layer("gaugebar");
-        lComplete = screen.layer("complete");
-        lCookBtn = screen.layer("cookbtn");
-        lArrow = screen.layer("arrow");
-        lHelp = screen.layer("help");
-        lTree = screen.layer("tree");
-        lTreeClose = screen.layer("treeclose");
-        lDrag = screen.layer("drag");
-        lHand = screen.layer("hand");
-        lEnding = screen.layer("ending");
-        lRetry = screen.layer("retry");
-        lDemoBase = screen.layer("demo_base");
-        lDemoOverlay = screen.layer("demo_overlay");
+        jjamppong = A.id.equals("g2");
+        java.util.Map<String, UiScreen.Layer> L = new java.util.HashMap<>();
+        // 원본 depth 순서 (아래 → 위)
+        String[] order = jjamppong
+                ? new String[]{"bg", "chef", "ing_vegetable", "dish2", "ing_noodle", "ing_oil", "ing_sugar", "ing_chun", "ing_eggM",
+                "ing_seaFood", "dish1", "dish3", "pan", "ing_kettle", "pot", "potkettle"}
+                : new String[]{"bg", "chef", "ing_vegetable", "ing_meat", "dish1", "dish2", "ing_noodle", "ing_garlic", "ing_oil",
+                "ing_sugar", "ing_chun", "pot", "potkettle", "ing_kettle", "dish3", "pan"};
+        for (String n : order) L.put(n, screen.layer(n));
+        for (String n : new String[]{"gauge", "gaugebar", "complete", "cookbtn", "arrow", "help", "tree", "treeclose", "drag",
+                "hand", "ending", "retry", "demo_base", "demo_overlay"}) L.put(n, screen.layer(n));
+        ingredients = jjamppong
+                ? new String[]{"vegetable", "seaFood", "noodle", "oil", "sugar", "chun", "eggM", "kettle"}
+                : new String[]{"vegetable", "meat", "noodle", "garlic", "oil", "sugar", "chun", "kettle"};
+        for (String m : ingredients) lIngredient.put(m, L.get("ing_" + m));
+        hitOrder = jjamppong
+                ? new Target[]{Target.KETTLE, Target.DISH1, Target.SEAFOOD, Target.EGGM, Target.CHUN, Target.SUGAR, Target.OIL,
+                Target.NOODLE, Target.DISH2, Target.VEGETABLE}
+                : new Target[]{Target.KETTLE, Target.CHUN, Target.SUGAR, Target.OIL, Target.GARLIC, Target.NOODLE, Target.DISH2,
+                Target.DISH1, Target.MEAT, Target.VEGETABLE};
+        lBg = L.get("bg"); lChef = L.get("chef"); lDish1 = L.get("dish1"); lDish2 = L.get("dish2"); lPot = L.get("pot");
+        lPotKettle = L.get("potkettle"); lDish3 = L.get("dish3"); lPan = L.get("pan"); lGauge = L.get("gauge");
+        lGaugeBar = L.get("gaugebar"); lComplete = L.get("complete"); lCookBtn = L.get("cookbtn"); lArrow = L.get("arrow");
+        lHelp = L.get("help"); lTree = L.get("tree"); lTreeClose = L.get("treeclose"); lDrag = L.get("drag");
+        lHand = L.get("hand"); lEnding = L.get("ending"); lRetry = L.get("retry"); lDemoBase = L.get("demo_base");
+        lDemoOverlay = L.get("demo_overlay");
         setController(controller);
-        screen.keepLoaded(true);
         startDemo();
     }
 
     // ================================================================ 외부 API
 
-    public Screen screen() { return screen; }
+    public UiScreen screen() { return screen; }
+
+    public String gameId() { return A.id; }
 
     public UUID controller() { return controller; }
 
@@ -239,6 +251,8 @@ public final class KitchenGame {
         noodle = false;
         cookComplete = false;
         foodScore = 0;
+        spiceScore = 0;
+        eggScore = 0;
         // MetaCookButton()
         takeOutVisible = false;
         takeOffVisible = true;
@@ -264,6 +278,7 @@ public final class KitchenGame {
         lDemoBase.hide();
         lDemoOverlay.hide();
         screen.removeText("vote");
+        screen.setViewerCursor(null, 0, 0);
         votes.clear();
         sound("zing");
     }
@@ -287,6 +302,8 @@ public final class KitchenGame {
         lRetry.hide();
         lBg.hide();
         hideGameLayers();
+        // 시연 중에는 각자 자기 커서로 '바로시작!' 을 누른다
+        screen.setViewerCursor(A.get("hand", "0"), 9 - 100, 13 - 100);
     }
 
     public boolean inDemo() { return phase == Phase.DEMO; }
@@ -304,7 +321,7 @@ public final class KitchenGame {
     /** 플레이어가 클릭: 자기 시선이 '바로시작!' 버튼 위면 투표 */
     public boolean vote(Player p) {
         if (phase != Phase.DEMO) return false;
-        double[] pt = screen.stagePoint(p.getEyeLocation());
+        double[] pt = screen.cursor(p);
         if (pt == null || !A.hit(A.frame(A.demo.button()), pt[0], pt[1])) return false;
         if (!votes.add(p.getUniqueId())) return true;
         sound("hover");
@@ -353,7 +370,7 @@ public final class KitchenGame {
             acc += f.durationMs();
         }
         AssetManifest.Frame b = A.frame(d.button());
-        screen.setText("vote", "바로시작! " + votes() + "/" + votesNeeded() + " (70%)", b.cx(), b.y() - 15, 11, false);
+        screen.setText("vote", "바로시작! " + votes() + "/" + votesNeeded() + " (70%)", b.cx(), b.y() - 15, false);
     }
 
     // ================================================================ tick
@@ -370,13 +387,13 @@ public final class KitchenGame {
         } else {
             tickEnding();
         }
-        screen.setLabel("조작 : " + controllerName, 8, 249, 15);
+        screen.setLabel("조작 : " + controllerName, 9, 250);
     }
 
     private void updateMouse(Player p) {
         double[] pt = null;
-        if (p != null && p.isOnline()) pt = screen.stagePoint(p.getEyeLocation());
-        if (pt != null && pt[0] >= 0 && pt[1] >= 0 && pt[0] < A.stageW && pt[1] < A.stageH) {
+        if (p != null && p.isOnline() && screen.isViewer(p)) pt = screen.cursor(p);
+        if (pt != null && pt[0] >= 0 && pt[1] >= 0 && pt[0] < 550 && pt[1] < 413) {
             mx = pt[0];
             my = pt[1];
         } else {
@@ -407,15 +424,16 @@ public final class KitchenGame {
         // 게이지 (gaugeMask 타임라인 2~300 프레임)
         if (gaugePlaying) {
             int f = 2 + (int) ((nowMs - gaugeStart) / FRAME_MS);
-            if (f >= 300) {
-                f = 300;
+            if (f >= A.gaugeFrames) {
+                f = A.gaugeFrames;
                 gaugePlaying = false;
             }
             gaugeFrame = f;
             // 프레임 스크립트: f2 DecoAction(1), f98 DecoAction(2), f230 DecoAction(3)
             if (gaugeDecoDone < 1 && f >= 2) { gaugeDecoDone = 1; DecoAction(nowFood.vessel, 1); }
-            if (gaugeDecoDone < 2 && f >= 98) { gaugeDecoDone = 2; DecoAction(nowFood.vessel, 2); }
-            if (gaugeDecoDone < 3 && f >= 230) { gaugeDecoDone = 3; DecoAction(nowFood.vessel, 3); }
+            int d2 = jjamppong ? 38 : 98, d3 = jjamppong ? 129 : 230;      // gaugeMask 프레임 스크립트
+            if (gaugeDecoDone < 2 && f >= d2) { gaugeDecoDone = 2; DecoAction(nowFood.vessel, 2); }
+            if (gaugeDecoDone < 3 && f >= d3) { gaugeDecoDone = 3; DecoAction(nowFood.vessel, 3); }
         }
         // 화살표 (needComplete 사운드가 끝나면 숨김)
         if (arrowVisible && nowMs >= arrowUntil) arrowVisible = false;
@@ -445,15 +463,21 @@ public final class KitchenGame {
         if (cookButtonsEnabled && takeOffVisible && A.hit(A.get("btn_takeOff", "up"), x, y)) return Target.TAKE_OFF;
         if (cookButtonsEnabled && takeOutVisible && A.hit(A.get("btn_takeOut", "up"), x, y)) return Target.TAKE_OUT;
         if (A.hit(A.get("btn_complete", "up"), x, y)) return Target.COMPLETE;
-        for (Target t : new Target[]{Target.KETTLE, Target.CHUN, Target.SUGAR, Target.OIL, Target.GARLIC, Target.NOODLE}) {
-            if (ingredientsEnabled && A.hit(A.get("ing_" + t.material, "1"), x, y)) return t;
-        }
-        if (dish2Active && A.hit(dishFrame("dish2", dish2Frame, dish2Grade, false), x, y)) return Target.DISH2;
-        if (dish1Active && A.hit(dishFrame("dish1", dish1Frame, dish1Grade, false), x, y)) return Target.DISH1;
-        for (Target t : new Target[]{Target.MEAT, Target.VEGETABLE}) {
-            if (ingredientsEnabled && A.hit(A.get("ing_" + t.material, "1"), x, y)) return t;
+        for (Target t : hitOrder) {
+            if (t == Target.DISH1) {
+                if (dish1Active && A.hit(dishFrame("dish1", dish1Frame, dish1Grade, false), x, y)) return t;
+            } else if (t == Target.DISH2) {
+                if (dish2Active && A.hit(dishFrame("dish2", dish2Frame, dish2Grade, false), x, y)) return t;
+            } else if (ingredientEnabled(t) && A.hit(A.get("ing_" + t.material, "1"), x, y)) {
+                return t;
+            }
         }
         return null;
+    }
+
+    /** ToggleButton 은 짬뽕의 메추리알(eggM) 버튼은 끄지 않는다 */
+    private boolean ingredientEnabled(Target t) {
+        return ingredientsEnabled || (jjamppong && t == Target.EGGM);
     }
 
     private void rollOver(Target t) {
@@ -544,7 +568,7 @@ public final class KitchenGame {
         switch (vessel) {
             case "pot" -> {
                 switch (m) {
-                    case "vegetable", "meat", "garlic", "chun", "oil", "sugar" -> BadMeterial();
+                    case "vegetable", "meat", "seaFood", "garlic", "chun", "oil", "sugar" -> BadMeterial();
                     case "noodle" -> PutInMeterial("pot", m, "water_kettle");   // nowFood.kettle 은 undefined 가 될 수 없음
                     case "kettle" -> {
                         if (nowFood.noodle && nowFood.kettle) {
@@ -568,16 +592,22 @@ public final class KitchenGame {
             }
             case "pan" -> {
                 switch (m) {
-                    case "vegetable", "meat", "chun", "kettle", "sugar" -> {
+                    case "vegetable", "meat", "seaFood", "chun", "kettle" -> {
                         PutInMeterial("pan", m, null);
                         SetIntV(800, "pan", m, "defaultPan");
+                    }
+                    case "sugar" -> {
+                        PutInMeterial("pan", m, null);
+                        SetIntV(800, "pan", m, "defaultPan");
+                        if (jjamppong) spiceScore += 10;                  // 짬뽕: 양념 점수
                     }
                     case "oil" -> {
                         PutInMeterial("pan", m, null);
                         SetIntV(1000, "pan", m, "defaultPan");
+                        if (jjamppong) spiceScore += 10;
                     }
                     case "noodle" -> BadMeterial();
-                    case "garlic" -> { }
+                    case "garlic" -> { if (jjamppong) spiceScore += 10; }
                     default -> DishLader("Pan", m);
                 }
             }
@@ -597,6 +627,8 @@ public final class KitchenGame {
                             dish3Frame = 4;
                         } else dish3Frame = 3;
                     }
+                } else if (jjamppong && m.equals("eggM")) {
+                    eggScore = 30;                                         // 짬뽕: 메추리알 올리기
                 } else BadMeterial();
             }
             default -> { }
@@ -661,12 +693,14 @@ public final class KitchenGame {
     private void CookMeterial(String vessel) {
         int f = gaugeFrame;
         int score, grade;
-        if (f <= 10) { score = 0; grade = 1; }
-        else if (f <= 50) { score = 30; grade = 1; }
-        else if (f <= 110) { score = 70; grade = 1; }
-        else if (f <= 200) { score = 100; grade = 1; }
-        else if (f <= 250) { score = 70; grade = 4; }
-        else if (f <= 290) { score = 30; grade = 4; }
+        // 게이지 구간 (짜장면 300프레임 / 짬뽕 139프레임)
+        int[] t = jjamppong ? new int[]{10, 40, 90, 111, 120, 130} : new int[]{10, 50, 110, 200, 250, 290};
+        if (f <= t[0]) { score = 0; grade = 1; }
+        else if (f <= t[1]) { score = 30; grade = 1; }
+        else if (f <= t[2]) { score = 70; grade = 1; }
+        else if (f <= t[3]) { score = 100; grade = 1; }
+        else if (f <= t[4]) { score = 70; grade = 4; }
+        else if (f <= t[5]) { score = 30; grade = 4; }
         else { score = 0; grade = 4; }
         double meterialScore = 0;    // SWF6: undefined → 0
         if ("pot".equals(vessel)) {
@@ -681,6 +715,34 @@ public final class KitchenGame {
             } else BadMeterial();
             nowPot = new FoodTree();
             noodleScore = score + meterialScore;
+        } else if (jjamppong) {
+            // 띵호와 주방장2 (짬뽕) 의 팬 레시피
+            if (nowPan.chun && (nowPan.vegetable || nowPan.seaFood)) {         // 한번에 다 털어 넣은
+                meterialScore = 30;
+                MakeFood("dish2", 3, grade);
+            } else if (nowPan.chun && !nowPan.vegetable && !nowPan.dish1) {
+                BadMeterial();
+            } else if (!nowPan.chun && nowPan.vegetable) {                     // 야채볶음
+                meterialScore = 50;
+                MakeFood("dish1", 2, grade);
+            } else if (nowPan.chun && nowPan.dish1) {                          // 야채볶음 + 고춧가루
+                meterialScore = 70;
+                MakeFood("dish2", 3, grade);
+            } else if ("chunzang".equals(nowPan.dish2) && nowPan.dish1) {      // 야채볶음 + 해물볶음
+                meterialScore = 100;
+                MakeFood("dish2", 3, grade);
+            } else if ("chunzang".equals(nowPan.dish2) && (nowPan.vegetable || nowPan.seaFood)) {
+                meterialScore = 80;
+                MakeFood("dish2", 3, grade);
+            } else if (!nowPan.vegetable && nowPan.seaFood) {                  // 해물볶음
+                meterialScore = 50;
+                MakeFood("dish2", 2, grade);
+            } else if (nowPan.chun && (nowPan.seaFood || nowPan.vegetable)) {
+                meterialScore = 70;
+                MakeFood("dish2", 2, grade);
+            } else BadMeterial();
+            nowPan = new FoodTree();
+            zzazangScore = score + meterialScore;
         } else {
             if (nowPan.chun && (nowPan.vegetable || nowPan.meat)) {            // 볶음짜장 - 한번에 다 털어 넣은
                 meterialScore = 30;
@@ -749,7 +811,7 @@ public final class KitchenGame {
         } else if (dish1Frame == 3 && dish2Frame == 3) {
             arrowVisible = true;
             arrowSince = nowMs;
-            arrowUntil = nowMs + 3450;     // needComplete 길이 → onSoundComplete 에서 화살표 숨김
+            arrowUntil = nowMs + (jjamppong ? 3660 : 3450);   // needComplete 길이 → onSoundComplete 에서 화살표 숨김
             sound("need_complete");
         } else if (dish1Frame > 1 || dish2Frame > 1) {
             sound("more_complete");
@@ -760,12 +822,18 @@ public final class KitchenGame {
 
     /** 원본 GotoEnding */
     private void GotoEnding() {
-        foodScore = zzazangScore + noodleScore;
         String key;
-        if (foodScore > 350) key = "3304";
-        else if (foodScore > 280) key = "3889";
-        else key = "4401";
-        plugin.getLogger().info("ending " + key + " score=" + foodScore + " (짜장 " + zzazangScore + ", 면 " + noodleScore + ")");
+        if (jjamppong) {
+            // 양념은 30점까지만, 넘치면 감점. 메추리알 30점
+            if (spiceScore > 30) spiceScore = 30 - spiceScore;
+            foodScore = zzazangScore + noodleScore + spiceScore + eggScore;
+            key = A.endingOrder.get(foodScore > 410 ? 0 : foodScore > 240 ? 1 : 2);
+        } else {
+            foodScore = zzazangScore + noodleScore;
+            key = A.endingOrder.get(foodScore > 350 ? 0 : foodScore > 280 ? 1 : 2);
+        }
+        plugin.getLogger().info("ending " + key + " score=" + foodScore + " (국물/짜장 " + zzazangScore + ", 면 " + noodleScore
+                + ", 양념 " + spiceScore + ", 메추리알 " + eggScore + ")");
         startEnding(key);
     }
 
@@ -822,6 +890,7 @@ public final class KitchenGame {
             case "sugar" -> { return A.get("pan", "sugar" + Math.min(5, f)); }
             case "meat" -> { return A.get("pan", "meat" + Math.min(13, f)); }
             case "vegetable" -> { return A.get("pan", "vegetable" + Math.min(11, f)); }
+            case "seaFood" -> { return A.get("pan", "seaFood" + Math.min(11, f)); }
             default -> {
                 if (panState.startsWith("broil_")) {
                     int k = (f - 1) % 9 + 1;
@@ -874,9 +943,9 @@ public final class KitchenGame {
         lBg.show(A.get("bg", "0"));
         int chefF = (int) (nowMs / FRAME_MS) % 50 + 1;
         lChef.show(A.get("chef", String.valueOf(chefF)));
-        for (String m : INGREDIENTS) {
+        for (String m : ingredients) {
             Target t = Target.valueOf(m.toUpperCase());
-            boolean hov = hover == t && ingredientsEnabled && drag == null;
+            boolean hov = hover == t && ingredientEnabled(t) && drag == null;
             lIngredient.get(m).show(A.get("ing_" + m, hov ? "2" : "1"));
         }
         lDish1.show(dishFrame("dish1", dish1Frame, dish1Grade, hover == Target.DISH1 && drag == null));
@@ -890,7 +959,7 @@ public final class KitchenGame {
         lPan.show(panFrame());
         panSounds();
         lGauge.show(A.get("gauge", "0"));
-        double frac = Math.max(0, (300.0 - gaugeFrame) / 299.0);
+        double frac = Math.max(0, (double) (A.gaugeFrames - gaugeFrame) / (A.gaugeFrames - 1));
         if (frac > 0.002) lGaugeBar.show(A.gaugeBar, 0, 0, frac, 1, 0);
         else lGaugeBar.hide();
         lComplete.show(A.get("btn_complete", hover == Target.COMPLETE ? "over" : "up"));
@@ -934,9 +1003,9 @@ public final class KitchenGame {
     }
 
     private void hideGameLayers() {
-        for (Screen.Layer l : new Screen.Layer[]{lChef, lDish1, lDish2, lPot, lPotKettle, lDish3, lPan, lGauge, lGaugeBar,
+        for (UiScreen.Layer l : new UiScreen.Layer[]{lChef, lDish1, lDish2, lPot, lPotKettle, lDish3, lPan, lGauge, lGaugeBar,
                 lComplete, lCookBtn, lArrow, lHelp, lTree, lTreeClose, lDrag, lHand}) l.hide();
-        for (Screen.Layer l : lIngredient.values()) l.hide();
+        for (UiScreen.Layer l : lIngredient.values()) l.hide();
     }
 
     private void tickEnding() {
@@ -951,9 +1020,10 @@ public final class KitchenGame {
             sound(e.events().get(endingEventIdx).getValue());
             endingEventIdx++;
         }
-        if (endingKey.equals("4401")) {
-            // f4836 stopAllSounds, f4844 failBGM.start()
-            long stopAt = Math.round((4836 - 4401) * FRAME_MS), failAt = Math.round((4844 - 4401) * FRAME_MS);
+        if (endingKey.equals(A.endingOrder.get(2))) {
+            // 실패 엔딩: stopAllSounds() 후 failBGM.start()  (짜장면 f4836/f4844, 짬뽕 f4819/f4821)
+            long stopAt = Math.round((jjamppong ? 4819 - 4380 : 4836 - 4401) * FRAME_MS);
+            long failAt = Math.round((jjamppong ? 4821 - 4380 : 4844 - 4401) * FRAME_MS);
             if (t >= stopAt && t - 50 < stopAt) stopAllSounds();
             if (t >= failAt && t - 50 < failAt) sound("fail_bgm");
         }
@@ -977,38 +1047,27 @@ public final class KitchenGame {
     // ================================================================ 사운드
 
     private void sound(String name) {
-        if (!plugin.soundEnabled()) return;
-        Location c = screen.center();
-        String key = "ddinghowa:" + name;
-        for (Player p : listeners()) {
-            p.playSound(c, key, SoundCategory.RECORDS, plugin.soundVolume(), 1f);
+        if (!plugin.soundEnabled() || name == null) return;
+        String key = "ddinghowa:" + A.sound(name);
+        for (Player p : screen.viewerPlayers()) {
+            p.playSound(p, key, SoundCategory.RECORDS, plugin.soundVolume(), 1f);
         }
         playingSounds.add(key);
-        if (plugin.logSounds()) plugin.getLogger().info("[snd] " + System.currentTimeMillis() + " " + name);
+        if (plugin.logSounds()) plugin.getLogger().info("[snd] " + System.currentTimeMillis() + " " + A.sound(name));
     }
 
     private void stopSound(String name) {
-        String key = "ddinghowa:" + name;
-        for (Player p : listeners()) p.stopSound(key, SoundCategory.RECORDS);
+        String key = "ddinghowa:" + A.sound(name);
+        for (Player p : screen.viewerPlayers()) p.stopSound(key, SoundCategory.RECORDS);
     }
 
     /** 원본 stopAllSounds() */
     private void stopAllSounds() {
         if (playingSounds.isEmpty()) return;
-        List<Player> ls = listeners();
+        List<Player> ls = screen.viewerPlayers();
         for (String k : playingSounds) for (Player p : ls) p.stopSound(k, SoundCategory.RECORDS);
         playingSounds.clear();
         if (plugin.logSounds()) plugin.getLogger().info("[sndstop] " + System.currentTimeMillis());
-    }
-
-    private List<Player> listeners() {
-        List<Player> out = new ArrayList<>();
-        Location c = screen.center();
-        double r = 16 * Math.max(1, plugin.soundVolume()) + 8;
-        for (Player p : screen.world().getPlayers()) {
-            if (p.getLocation().distanceSquared(c) <= r * r) out.add(p);
-        }
-        return out;
     }
 
     // 디버그/테스트용 상태 요약
@@ -1017,7 +1076,8 @@ public final class KitchenGame {
                 + " hover=" + hover + " drag=" + (drag == null ? "-" : drag.material)
                 + " pot=" + potState + " pan=" + panState + " gauge=" + gaugeFrame
                 + " dish1=" + dish1Frame + "/" + dish1Grade + " dish2=" + dish2Frame + "/" + dish2Grade
-                + " dish3=" + dish3Frame + " score=" + zzazangScore + "+" + noodleScore + " vessel=" + nowFood.vessel;
+                + " dish3=" + dish3Frame + " score=" + zzazangScore + "+" + noodleScore + "+" + spiceScore + "+" + eggScore
+                + " vessel=" + (nowFood == null ? "-" : nowFood.vessel);
     }
 
     /** 테스트용: 스테이지 좌표로 마우스를 옮기고 클릭 */

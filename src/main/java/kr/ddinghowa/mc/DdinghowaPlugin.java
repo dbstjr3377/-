@@ -8,31 +8,34 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.entity.Entity;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.components.EquippableComponent;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
@@ -75,10 +78,8 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
         } catch (Exception e) {
             throw new IllegalStateException("리소스팩을 읽을 수 없습니다", e);
         }
-        // 리소스팩 파일을 플러그인 폴더에도 저장 (server.properties 로 직접 배포하고 싶을 때)
         try {
-            java.nio.file.Path out = getDataFolder().toPath().resolve("ddinghowa_pack.zip");
-            java.nio.file.Files.write(out, packBytes);
+            java.nio.file.Files.write(getDataFolder().toPath().resolve("ddinghowa_pack.zip"), packBytes);
         } catch (IOException ignored) {
         }
         startHttp();
@@ -88,15 +89,15 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
             cmd.setExecutor(this);
             cmd.setTabCompleter(this);
         }
-        cleanupStrayEntities();
+        // 서버가 비정상 종료돼 손 아이템이 남아 있으면 복구
+        for (Player p : Bukkit.getOnlinePlayers()) UiScreen.restoreHand(p);
         Bukkit.getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
-        getLogger().info("띵호와 주방장 로드 완료. 텍스처 " + assets.frames.size() + "개, 리소스팩 SHA-1 " + packSha1);
+        getLogger().info("띵호와 주방장 로드 완료. 게임 " + assets.games.keySet() + ", 리소스팩 SHA-1 " + packSha1);
     }
 
     @Override
     public void onDisable() {
-        if (game != null) game.destroy();
-        game = null;
+        stopGame();
         if (http != null) http.stop(0);
     }
 
@@ -104,7 +105,7 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     boolean soundEnabled() { return getConfig().getBoolean("sound.enabled", true); }
 
-    float soundVolume() { return (float) getConfig().getDouble("sound.volume", 1.5); }
+    float soundVolume() { return (float) getConfig().getDouble("sound.volume", 1.0); }
 
     boolean logSounds() { return getConfig().getBoolean("debug.log-sounds", false); }
 
@@ -143,8 +144,7 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
     }
 
     private void sendPack(Player p) {
-        String url = packUrl(p);
-        ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(PACK_ID, URI.create(url), packSha1);
+        ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(PACK_ID, URI.create(packUrl(p)), packSha1);
         p.sendResourcePacks(ResourcePackRequest.resourcePackRequest()
                 .packs(info)
                 .required(getConfig().getBoolean("resource-pack.required", false))
@@ -160,53 +160,25 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
         if (game == null) return;
         try {
             game.tick();
+            game.screen().render();
         } catch (Exception e) {
             getLogger().log(java.util.logging.Level.SEVERE, "게임 tick 오류", e);
         }
     }
 
-    private void cleanupStrayEntities() {
-        for (World w : Bukkit.getWorlds()) {
-            for (Entity e : w.getEntities()) {
-                if (e.getPersistentDataContainer().has(Screen.TAG, PersistentDataType.BYTE)) e.remove();
-            }
+    private void startGame(Player controller, String gameId) {
+        stopGame();
+        AssetManifest.GameAssets ga = assets.games.get(gameId);
+        UiScreen ui = new UiScreen(this, assets, getConfig().getDouble("ui.cursor-fov", 70));
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (getConfig().getBoolean("ui.everyone", true) || p.equals(controller)) ui.addViewer(p);
         }
+        game = new KitchenGame(this, ga, ui, controller);
     }
 
-    private void startGame(Player controller) {
+    private void stopGame() {
         if (game != null) game.destroy();
-        Location eye = controller.getEyeLocation();
-        float yaw = Math.round(eye.getYaw() / 90f) * 90f;           // 화면은 동서남북으로 정렬
-        double rad = Math.toRadians(yaw);
-        org.bukkit.util.Vector facing = new org.bukkit.util.Vector(-Math.sin(rad), 0, Math.cos(rad));
-        double width = getConfig().getDouble("screen.width", 4.0);
-        double aspect = assets.stageH / assets.stageW;
-        Location center;
-        if (getConfig().getBoolean("screen.fit-to-view", true)) {
-            // 화면 세로 = 클라이언트 세로 시야. 눈높이에 화면 중심을 두고, 세로 FOV 에 꼭 맞는 거리에 세운다.
-            double eyeH = eye.getY() - controller.getLocation().getY();
-            double maxH = 2 * (eyeH - 0.05);                          // 화면 아래가 땅에 묻히지 않게
-            if (width * aspect > maxH) width = maxH / aspect;
-            double fov = Math.toRadians(getConfig().getDouble("screen.fov", 70));
-            double dist = (width * aspect / 2) / Math.tan(fov / 2);
-            center = eye.clone().add(facing.multiply(dist));
-        } else {
-            double dist = getConfig().getDouble("screen.distance", 5.5);
-            center = eye.clone().add(facing.multiply(dist));
-            double halfH = width * aspect / 2;
-            double minY = controller.getLocation().getY() + 0.2 + halfH;
-            center.setY(Math.max(center.getY() + getConfig().getDouble("screen.height-offset", 0.0), minY));
-        }
-        Screen screen = new Screen(this, assets, center, yaw + 180f, width,
-                (float) getConfig().getDouble("screen.view-range", 1.5),
-                getConfig().getInt("render.tilt-sign", 1));
-        game = new KitchenGame(this, assets, screen, controller);
-        // 조작자가 화면을 정면으로 보도록
-        Location look = controller.getLocation();
-        look.setYaw(yaw);
-        look.setPitch(0);
-        controller.teleport(look);
-        game.setController(controller);
+        game = null;
     }
 
     // ------------------------------------------------------------ mask
@@ -227,17 +199,38 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     // ------------------------------------------------------------ events
 
-    @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        if (getConfig().getBoolean("resource-pack.enabled", true)) {
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                if (e.getPlayer().isOnline()) sendPack(e.getPlayer());
-            }, 20L);
-        }
+    private boolean isViewer(HumanEntity p) {
+        return game != null && p instanceof Player pl && game.screen().isViewer(pl);
     }
 
     private boolean isController(Player p) {
         return game != null && p.getUniqueId().equals(game.controller());
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent e) {
+        Player p = e.getPlayer();
+        UiScreen.restoreHand(p);
+        if (getConfig().getBoolean("resource-pack.enabled", true)) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                if (p.isOnline()) sendPack(p);
+            }, 20L);
+        }
+        if (game != null && getConfig().getBoolean("ui.everyone", true)) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                if (p.isOnline() && game != null) game.screen().addViewer(p);
+            }, 60L);
+        }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent e) {
+        if (game != null) game.screen().removeViewer(e.getPlayer());
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent e) {
+        e.getDrops().removeIf(UiScreen::isInvisibleItem);
     }
 
     private void controllerClick() {
@@ -248,63 +241,82 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSwing(PlayerArmSwingEvent e) {
-        if (game == null || e.getHand() != EquipmentSlot.HAND) return;
+        if (game == null || e.getHand() != EquipmentSlot.HAND || !isViewer(e.getPlayer())) return;
         if (game.inDemo()) {
-            // 시연 중: 누구나 '바로시작!' 을 눌러 투표할 수 있음
-            game.vote(e.getPlayer());
+            game.vote(e.getPlayer());     // 시연 중: 누구나 '바로시작!' 투표
             return;
         }
         if (isController(e.getPlayer())) controllerClick();
     }
 
-    @EventHandler
-    public void onDrop(PlayerDropItemEvent e) {
-        if (isController(e.getPlayer())) lastDropTick = tickCounter;
-    }
-
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent e) {
-        if (game != null && game.inDemo() && e.getHand() == EquipmentSlot.HAND
-                && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)) {
-            if (game.vote(e.getPlayer())) e.setCancelled(true);
-            return;
-        }
-        if (!isController(e.getPlayer())) return;
-        // 조작 중에는 블록 부수기/설치 방지
-        if (e.getAction() == Action.LEFT_CLICK_BLOCK || e.getAction() == Action.RIGHT_CLICK_BLOCK) e.setCancelled(true);
+        if (!isViewer(e.getPlayer())) return;
+        e.setCancelled(true);   // 게임 화면을 보는 동안에는 블록/아이템 사용 막기
         if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && e.getHand() == EquipmentSlot.HAND) {
-            controllerClick();
+            if (game.inDemo()) game.vote(e.getPlayer());
+            else if (isController(e.getPlayer())) controllerClick();
         }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteractEntity(PlayerInteractEntityEvent e) {
-        if (isController(e.getPlayer())) e.setCancelled(true);
+        if (isViewer(e.getPlayer())) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onBreak(BlockBreakEvent e) {
-        if (isController(e.getPlayer())) e.setCancelled(true);
+        if (isViewer(e.getPlayer())) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlace(BlockPlaceEvent e) {
+        if (isViewer(e.getPlayer())) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onDamage(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player p && isController(p)) e.setCancelled(true);
+        if (e.getDamager() instanceof Player p && isViewer(p)) e.setCancelled(true);
     }
 
-    @EventHandler
-    public void onMove(PlayerMoveEvent e) {
-        if (!isController(e.getPlayer()) || !getConfig().getBoolean("control.lock-controller", false)) return;
-        Location from = e.getFrom(), to = e.getTo();
-        if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
-            Location fixed = from.clone();
-            fixed.setYaw(to.getYaw());
-            fixed.setPitch(to.getPitch());
-            e.setTo(fixed);
+    // 손이 보이지 않게 쥐여 준 아이템을 바꾸거나 버리지 못하게
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onHeld(PlayerItemHeldEvent e) {
+        if (isViewer(e.getPlayer())) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onSwap(PlayerSwapHandItemsEvent e) {
+        if (isViewer(e.getPlayer())) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onDrop(PlayerDropItemEvent e) {
+        if (isViewer(e.getPlayer())) {
+            e.setCancelled(true);
+            lastDropTick = tickCounter;
         }
     }
 
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInvClick(InventoryClickEvent e) {
+        if (isViewer(e.getWhoClicked()) || UiScreen.isInvisibleItem(e.getCurrentItem())) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInvDrag(InventoryDragEvent e) {
+        if (isViewer(e.getWhoClicked())) e.setCancelled(true);
+    }
+
     // ------------------------------------------------------------ commands
+
+    private String gameArg(String s) {
+        if (s == null) return "g1";
+        return switch (s.toLowerCase(Locale.ROOT)) {
+            case "2", "g2", "jjamppong", "짬뽕" -> "g2";
+            default -> "g1";
+        };
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -312,21 +324,28 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
         switch (sub) {
             case "start", "시작" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
-                Player target = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : sender instanceof Player p ? p : null;
+                // /ddinghowa start [플레이어] [1|2]
+                Player target = null;
+                String gid = "g1";
+                for (int i = 1; i < args.length; i++) {
+                    Player p = Bukkit.getPlayerExact(args[i]);
+                    if (p != null) target = p;
+                    else gid = gameArg(args[i]);
+                }
+                if (target == null && sender instanceof Player p) target = p;
                 if (target == null) {
-                    sender.sendMessage(Component.text("조작할 플레이어를 지정하세요: /" + label + " start <플레이어>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("조작할 플레이어를 지정하세요: /" + label + " start <플레이어> [1|2]", NamedTextColor.RED));
                     return true;
                 }
-                startGame(target);
+                startGame(target, gid);
+                String title = assets.games.get(gid).title;
                 Bukkit.broadcast(Component.text("[띵호와 주방장] ", NamedTextColor.GOLD)
-                        .append(Component.text("짜장면 만들기 시작! 조작 : " + target.getName(), NamedTextColor.YELLOW)));
-                target.sendMessage(Component.text("화면을 바라보고 좌클릭 = 마우스 클릭. 재료를 클릭해서 집고, 냄비/팬/그릇에 다시 클릭해서 넣으세요.", NamedTextColor.GRAY));
-                Bukkit.broadcast(Component.text("시연을 건너뛰려면 화면의 '바로시작!' 버튼을 보고 클릭하세요. 접속자 70%가 누르면 바로 시작합니다.", NamedTextColor.GRAY));
+                        .append(Component.text(title + " 만들기 시작! 조작 : " + target.getName(), NamedTextColor.YELLOW)));
+                Bukkit.broadcast(Component.text("고개를 돌리면 커서가 움직이고, 좌클릭이 마우스 클릭입니다. 시연을 건너뛰려면 '바로시작!'을 클릭하세요 (접속자 70%).", NamedTextColor.GRAY));
             }
             case "stop", "종료" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
-                if (game != null) game.destroy();
-                game = null;
+                stopGame();
                 sender.sendMessage(Component.text("게임을 종료했습니다.", NamedTextColor.YELLOW));
             }
             case "restart", "재시작" -> {
@@ -348,8 +367,17 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
                     sender.sendMessage(Component.text("플레이어를 찾을 수 없습니다.", NamedTextColor.RED));
                     return true;
                 }
+                game.screen().addViewer(target);
                 game.setController(target);
                 Bukkit.broadcast(Component.text("[띵호와 주방장] 조작 : " + target.getName(), NamedTextColor.GOLD));
+            }
+            case "watch", "보기" -> {   // 내 화면에 게임 켜기/끄기
+                if (!(sender instanceof Player p) || game == null) return noGame(sender);
+                if (game.screen().isViewer(p)) {
+                    if (isController(p)) {
+                        sender.sendMessage(Component.text("조작자는 화면을 끌 수 없습니다.", NamedTextColor.RED));
+                    } else game.screen().removeViewer(p);
+                } else game.screen().addViewer(p);
             }
             case "mask", "가면" -> {
                 if (!sender.hasPermission("ddinghowa.mask")) return deny(sender);
@@ -361,11 +389,10 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
                 target.getInventory().addItem(createMask());
                 sender.sendMessage(Component.text(target.getName() + " 에게 띵호와 주방장 가면을 지급했습니다.", NamedTextColor.YELLOW));
             }
-            case "wear" -> {   // 바로 머리에 씌우기 (테스트/연출용)
+            case "wear" -> {
                 if (!sender.hasPermission("ddinghowa.mask")) return deny(sender);
                 Player target = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : sender instanceof Player p ? p : null;
-                if (target == null) return true;
-                target.getInventory().setHelmet(createMask());
+                if (target != null) target.getInventory().setHelmet(createMask());
             }
             case "pack", "리소스팩" -> {
                 Player target = args.length >= 2 && sender.hasPermission("ddinghowa.admin") ? Bukkit.getPlayerExact(args[1])
@@ -375,30 +402,32 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
             case "debug" -> {
                 if (!sender.hasPermission("ddinghowa.admin")) return deny(sender);
                 if (game == null) return noGame(sender);
+                Player cp = Bukkit.getPlayer(game.controller());
                 if (args.length >= 4 && args[1].equals("click")) {
                     game.debugClickAt(Double.parseDouble(args[2]), Double.parseDouble(args[3]));
                 } else if (args.length >= 2 && args[1].equals("click")) {
-                    Player p = Bukkit.getPlayer(game.controller());
-                    if (game.inDemo() && p != null) game.vote(p); else game.click();
-                } else if (args.length >= 4 && args[1].equals("aim")) {
-                    // 조작자의 시선을 스테이지 좌표 (x,y) 로 돌림 (실제 레이캐스트 경로 테스트용)
-                    Player p = Bukkit.getPlayer(game.controller());
-                    if (p != null) {
-                        Location t = game.screen().stageToWorld(Double.parseDouble(args[2]), Double.parseDouble(args[3]));
-                        Location l = p.getLocation();
-                        l.setDirection(t.toVector().subtract(p.getEyeLocation().toVector()));
-                        p.teleport(l);
+                    if (game.inDemo() && cp != null) game.vote(cp); else game.click();
+                } else if (args.length >= 4 && args[1].equals("aim") && cp != null) {
+                    // 조작자의 시선을 돌려 커서를 스테이지 좌표 (x,y) 로 (실제 시선→커서 경로 테스트용)
+                    double[] cur = game.screen().cursor(cp);
+                    double yawSpan = getConfig().getDouble("ui.cursor-fov", 70) * 550 / 413, pitchSpan = getConfig().getDouble("ui.cursor-fov", 70);
+                    var l = cp.getLocation();
+                    if (cur != null) {
+                        l.setYaw((float) (l.getYaw() + (Double.parseDouble(args[2]) - cur[0]) / 550 * yawSpan));
+                        l.setPitch((float) (l.getPitch() + (Double.parseDouble(args[3]) - cur[1]) / 413 * pitchSpan));
+                        cp.teleport(l);
                     }
                 }
                 sender.sendMessage(game.debugState());
             }
             default -> {
-                sender.sendMessage(Component.text("띵호와 주방장1 - 짜장면 만들기", NamedTextColor.GOLD));
-                sender.sendMessage(Component.text("/" + label + " start [플레이어]  - 게임 시작 (그 플레이어가 조작)", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("띵호와 주방장 1·2 (짜장면 / 짬뽕)", NamedTextColor.GOLD));
+                sender.sendMessage(Component.text("/" + label + " start [플레이어] [1|2]  - 게임 시작 (1 짜장면, 2 짬뽕)", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " stop  - 게임 종료", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " restart  - 처음(시연)부터", NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("/" + label + " skip  - 시연 강제 건너뛰기 (평소엔 접속자 70%가 화면의 '바로시작!' 클릭)", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("/" + label + " skip  - 시연 강제 건너뛰기 (평소엔 접속자 70%가 '바로시작!' 클릭)", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " control <플레이어>  - 조작자 변경", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("/" + label + " watch  - 내 화면에 게임 켜기/끄기", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " mask [플레이어]  - 주방장 가면 지급", NamedTextColor.YELLOW));
                 sender.sendMessage(Component.text("/" + label + " pack  - 리소스팩 다시 받기", NamedTextColor.YELLOW));
             }
@@ -420,12 +449,15 @@ public final class DdinghowaPlugin extends JavaPlugin implements Listener, TabCo
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("start", "stop", "restart", "skip", "control", "mask", "pack")) {
+            for (String s : List.of("start", "stop", "restart", "skip", "control", "watch", "mask", "pack")) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
-        } else if (args.length == 2 && List.of("start", "control", "mask", "pack", "wear").contains(args[0].toLowerCase(Locale.ROOT))) {
+        } else if (args.length >= 2 && List.of("start", "control", "mask", "pack", "wear").contains(args[0].toLowerCase(Locale.ROOT))) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.getName().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(p.getName());
+                if (p.getName().toLowerCase(Locale.ROOT).startsWith(args[args.length - 1].toLowerCase(Locale.ROOT))) out.add(p.getName());
+            }
+            if (args[0].equalsIgnoreCase("start")) {
+                for (String g : List.of("1", "2")) if (g.startsWith(args[args.length - 1])) out.add(g);
             }
         }
         return out;

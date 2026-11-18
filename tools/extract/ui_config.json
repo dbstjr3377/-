@@ -1,0 +1,155 @@
+{
+ "fonts": "font/ttf",
+ "text_chars": "조작바로시짬뽕짜장면점수",
+ "gauge_red": [
+  255,
+  0,
+  0,
+  255
+ ],
+ "shader": "tools/text.vsh",
+ "mask": "cap/t/mask_head.png",
+ "games": {
+  "g1": {
+   "title": "짜장면",
+   "swf": "dl/ddinghowa1.swf",
+   "cap": "tools/cap/a",
+   "end": "tools/cap/end",
+   "demo": "tools/cap/demo3",
+   "scale": 1.5,
+   "endings": [
+    [
+     3304,
+     3888
+    ],
+    [
+     3889,
+     4400
+    ],
+    [
+     4401,
+     4864
+    ]
+   ],
+   "demo_range": [
+    170,
+    3265
+   ],
+   "gauge_frames": 300,
+   "sounds": {
+    "1": "hover",
+    "17": "take",
+    "15": "fail_bgm",
+    "16": "falling_water",
+    "18": "more_complete",
+    "19": "bad2",
+    "20": "need_complete",
+    "21": "good1",
+    "22": "good0",
+    "23": "bad1",
+    "24": "bad0",
+    "40": "zing",
+    "94": "boil",
+    "101": "sizzle_short",
+    "122": "drop",
+    "141": "meat_drop",
+    "153": "broil",
+    "287": "demo_bgm",
+    "457": "s457",
+    "543": "s543",
+    "620": "s620",
+    "631": "s631",
+    "646": "s646",
+    "667": "s667",
+    "690": "s690"
+   },
+   "trims": {
+    "94": [
+     0,
+     2.021
+    ],
+    "16": [
+     2.521,
+     3.171
+    ],
+    "101": [
+     0.506,
+     1.791
+    ]
+   }
+  },
+  "g2": {
+   "title": "짬뽕",
+   "swf": "dl/ddinghowa2.swf",
+   "cap": "tools/cap/g2a",
+   "end": "tools/cap/g2end",
+   "demo": "tools/cap/g2demo",
+   "scale": 1.5,
+   "endings": [
+    [
+     3351,
+     3945
+    ],
+    [
+     3946,
+     4379
+    ],
+    [
+     4380,
+     4822
+    ]
+   ],
+   "demo_range": [
+    159,
+    3137
+   ],
+   "gauge_frames": 139,
+   "sounds": {
+    "1": "hover",
+    "15": "zing",
+    "16": "fail_bgm",
+    "17": "take",
+    "18": "falling_water",
+    "19": "more_complete",
+    "20": "bad2",
+    "21": "need_complete",
+    "22": "good1",
+    "24": "bad1",
+    "25": "bad0",
+    "96": "boil",
+    "103": "sizzle_short",
+    "124": "drop",
+    "143": "meat_drop",
+    "165": "broil",
+    "23": "s23",
+    "26": "s26",
+    "28": "s28",
+    "31": "s31",
+    "38": "s38",
+    "272": "s272",
+    "430": "s430",
+    "543": "s543",
+    "619": "s619",
+    "630": "s630",
+    "647": "s647",
+    "666": "s666",
+    "685": "s685",
+    "686": "s686"
+   },
+   "trims": {
+    "96": [
+     0,
+     2.021
+    ],
+    "18": [
+     2.521,
+     3.171
+    ],
+    "103": [
+     0,
+     1.285
+    ]
+   }
+  }
+ }
+}
